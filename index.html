@@ -21,13 +21,36 @@
 .picker-close{margin-top:8px;width:100%;padding:6px;border:0;background:transparent;color:#336852}
 @media(max-width:740px){.layout{grid-template-columns:1fr}.board{width:min(100%,calc(var(--n)*75px + 52px));grid-template-columns:26px repeat(var(--n),minmax(0,1fr)) 26px}.cell{font-size:clamp(16px,4vw,27px)}}
 @media(max-width:390px){.board{width:100%;grid-template-columns:20px repeat(var(--n),minmax(0,1fr)) 20px}}
+
+/* Sand-and-ochre palette, consistent square footprint across puzzle sizes. */
+:root{background:#f5f0e7;color:#171717}
+body{background:#f5f0e7;color:#171717}
+a{color:#805115}
+.wrap{max-width:1480px}
+.panel{background:#fffdfa;border-color:#d8c8ae;box-shadow:0 8px 26px #61452319}
+.board{--board-side:min(100%, 67vh, 690px);width:var(--board-side);height:auto;aspect-ratio:1;grid-template-columns:repeat(var(--count),minmax(0,1fr));grid-template-rows:repeat(var(--count),minmax(0,1fr));gap:3px;margin:20px auto}
+.cell,.clue,.blank{min-width:0;min-height:0;border-radius:7px;aspect-ratio:auto}
+.cell{background:#fffaf0;color:#171717;border:1px solid #ceb996;font-size:clamp(16px,2.2vw,29px)}
+.cell.given{background:#f0dfbd;color:#171717}
+.cell.active{outline:3px solid #ae7824;outline-offset:-3px;background:#ffefd0}
+.cell.latest{background:#f4c875!important;box-shadow:inset 0 0 0 3px #ab6d19;color:#171717}
+.clue{background:transparent!important;border:1px solid #e9dfcf;color:#171717;font-size:clamp(13px,1.5vw,21px);font-weight:800}
+.clue.ok{color:#23763e!important}.clue.pending{color:#bb3b2b!important}
+.blank{background:transparent;border:1px solid transparent}
+.pad button,.actions button,.primary{border:1px solid #bb995c;background:#f0dfb9;color:#171717;border-radius:10px}
+.primary{background:#c28a34;color:#171717;border-color:#a97119}
+#status{color:#292018}
+#picker{background:#fff9ee;border-color:#b98634;color:#171717}
+.picker-pad button{background:#f1dfb8;color:#171717;border-color:#c7a56b}
+.domain-digit{color:#3c2b14}.domain-digit.off{opacity:.13}
+@media(max-width:740px){.board{--board-side:min(95vw,65vh,690px);grid-template-columns:repeat(var(--count),minmax(0,1fr));grid-template-rows:repeat(var(--count),minmax(0,1fr))}}
 </style>
 </head>
 <body><div class="wrap">
 <header><div><h1>Skyscrapers</h1><div class="sub">A puzzle of heights and hidden views</div></div><a href="https://github.com/TonyCongqianWang/SkyscraperGameWeb">GitHub ↗</a></header>
 <div class="layout"><main class="panel">
 <h2 id="heading">Puzzle</h2><div id="board" class="board" aria-label="Skyscrapers puzzle"></div>
-<div class="pad" id="pad"></div><div class="actions"><button id="erase">Clear selected</button><button id="undo">↶ Undo</button><button id="check">Check clues</button><button id="domains" aria-pressed="false">Show domains</button></div>
+<div class="pad" id="pad"></div><div class="actions"><button id="undo">↶ Undo</button><button id="check">Check clues</button><button id="domains" aria-pressed="false">Show domains</button></div>
 <p id="status" role="status" aria-live="polite"></p>
 </main><aside class="panel controls"><h2>New puzzle</h2><label for="size">Grid size</label><select id="size"><option>4</option><option selected>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select>
 <label for="clue">Visibility clues <output id="clueOut">85%</output></label><input id="clue" type="range" min="30" max="100" step="5" value="85">
@@ -41,7 +64,7 @@
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-let n=5,grid=[],initial=[],solution=[],clues=[],selected=-1,history=[],checked=new Set(),feedback="",moves=[],lastMove=-1,showDomains=false;
+let n=5,grid=[],initial=[],solution=[],clues=[],selected=-1,history=[],checked=new Set(),feedback="",moves=[],lastMove=-1,showDomains=false,invalidCandidates=new Map(),isInfeasible=false;
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function latin(size){const row=shuffle(Array.from({length:size},(_,i)=>i)),col=shuffle(Array.from({length:size},(_,i)=>i)),vals=shuffle(Array.from({length:size},(_,i)=>i+1));return row.map(r=>col.map(c=>vals[(r+c)%size]))}
 function visible(xs){let top=0,count=0;for(const x of xs){if(x>top){top=x;count++}}return count}
@@ -50,11 +73,53 @@ function computeClues(g){return Array.from({length:4*n},(_,i)=>visible(getLine(M
 function flatten(g){return g.flat().join(" ")}
 function puzzleText(){return '"'+clues.join(" ")+'" "'+flatten(initial)+'"'}
 function setStatus(t){feedback=t;$("status").textContent=t}
-function start(){n=Number($("size").value);solution=latin(n);clues=computeClues(solution);const p=Number($("clue").value)/100;clues=clues.map(v=>Math.random()<p?v:0);const f=Number($("filled").value)/100;initial=solution.map(row=>row.map(v=>Math.random()<f?v:0));grid=initial.map(row=>row.slice());history=[];moves=[];lastMove=-1;selected=-1;checked=new Set();closePicker();render();setStatus("New puzzle ready. Select an empty square.");}
-function isValid(row,col,value){if(!value)return true;for(let i=0;i<n;i++)if((i!==col&&grid[row][i]===value)||(i!==row&&grid[i][col]===value))return false;return true}
-function setCell(value){if(selected<0)return setStatus("Select an empty cell first.");const r=Math.floor(selected/n),c=selected%n;if(initial[r][c])return setStatus("Given cells cannot be changed.");if(grid[r][c])return setStatus("This cell is already filled. Only the last placed number can be removed using Undo.");if(value&&(!Number.isInteger(value)||value<1||value>n||!isValid(r,c,value)))return setStatus("That number is already used in this row or column.");if(grid[r][c]===value)return;history.push(grid.map(row=>row.slice()));moves.push(selected);lastMove=selected;grid[r][c]=value;checked.clear();render();if(grid.every(row=>row.every(x=>x>0))){const bad=clues.some((v,i)=>v&&visible(getLine(Math.floor(i/n),i%n))!==v);setStatus(bad?"Grid filled, but one or more edge clues do not match.":"✓ Solved! All rows, columns and clues match.");}else setStatus(value?"Number entered.":"Cell cleared.");}
-function checkOne(i){if(!clues[i])return;const line=getLine(Math.floor(i/n),i%n);if(line.every(x=>x>0)){checked.add(i);setStatus(visible(line)===clues[i]?"✓ Clue satisfied.":"✗ Clue does not match. Review your moves.");}else setStatus("This row or column is not complete yet.");render()}
-function render(){const b=$("board");b.style.setProperty("--n",n);b.replaceChildren();$("heading").textContent=n+" × "+n+" puzzle";
+function start(){n=Number($("size").value);solution=latin(n);clues=computeClues(solution);const p=Number($("clue").value)/100;clues=clues.map(v=>Math.random()<p?v:0);const f=Number($("filled").value)/100;initial=solution.map(row=>row.map(v=>Math.random()<f?v:0));grid=initial.map(row=>row.slice());history=[];moves=[];lastMove=-1;selected=-1;checked=new Set();invalidCandidates=new Map();isInfeasible=false;closePicker();render();setStatus("New puzzle ready. Select an empty square.");}
+function isValid(row,col,value){
+ if(!value)return true;
+ if(invalidCandidates.get(row*n+col)?.has(value))return false;
+ for(let i=0;i<n;i++)if((i!==col&&grid[row][i]===value)||(i!==row&&grid[i][col]===value))return false;
+ return true;
+}
+function domain(r,c){return Array.from({length:n},(_,i)=>i+1).filter(v=>isValid(r,c,v))}
+/* Port of the C# engine's ConstraintChecking bound propagation, combined
+   with GameNode's row/column candidate and value-position checks. */
+function constraintFeasible(index){
+ const clue=clues[index];if(!clue)return true;
+ const side=Math.floor(index/n),k=index%n;
+ let lower=1,upperPartial=0,currentMaxLower=0,currentMaxUpper=0;
+ const vals=getLine(side,k);
+ for(let j=0;j<n;j++){
+   const options=vals[j]?[vals[j]]:domain(side<2?(side===0?j:n-1-j):k,side<2?k:(side===2?j:n-1-j));
+   if(!options.length)return false;
+   const lb=Math.min(...options),ub=Math.max(...options);
+   if(ub>currentMaxLower){
+     upperPartial++;
+     if(lb>currentMaxUpper){
+       currentMaxLower=lb;currentMaxUpper=ub;
+       if(currentMaxUpper<n)lower++;
+     }else{
+       currentMaxLower=Math.max(currentMaxLower,lb);
+       currentMaxUpper=Math.max(currentMaxUpper,ub);
+     }
+   }
+   currentMaxLower=Math.max(currentMaxLower,j+1);
+   if(lower>clue||upperPartial-currentMaxLower+n<clue)return false;
+   if(currentMaxLower===n)break;
+ }
+ return true;
+}
+function evaluateState(){
+ for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(!grid[r][c]&&!domain(r,c).length)return true;
+ for(let i=0;i<n;i++)for(let v=1;v<=n;v++){
+   if(!grid[i].includes(v)&&!grid[i].some((x,c)=>!x&&isValid(i,c,v)))return true;
+   if(!grid.some(row=>row[i]===v)&&!grid.some((row,r)=>!row[i]&&isValid(r,i,v)))return true;
+ }
+ return clues.some((v,i)=>v&&!constraintFeasible(i));
+}
+
+function setCell(value){if(isInfeasible)return setStatus("This state is infeasible. Undo the last move to continue.");if(selected<0)return setStatus("Select an empty cell first.");const r=Math.floor(selected/n),c=selected%n;if(initial[r][c])return setStatus("Given cells cannot be changed.");if(grid[r][c])return setStatus("This cell is already filled. Only the most recent move can be removed using Undo.");if(grid[r][c])return setStatus("This cell is already filled. Only the last placed number can be removed using Undo.");if(value&&(!Number.isInteger(value)||value<1||value>n||!isValid(r,c,value)))return setStatus("That number is already used in this row or column.");if(grid[r][c]===value)return;history.push(grid.map(row=>row.slice()));moves.push({index:selected,value});lastMove=selected;grid[r][c]=value;checked.clear();isInfeasible=evaluateState();render();if(isInfeasible)return setStatus("Contradiction detected. Undo the last move to continue; its assignment will be marked invalid.");if(grid.every(row=>row.every(x=>x>0))){const bad=clues.some((v,i)=>v&&visible(getLine(Math.floor(i/n),i%n))!==v);setStatus(bad?"Grid filled, but one or more edge clues do not match.":"✓ Solved! All rows, columns and clues match.");}else setStatus(value?"Number entered.":"Cell cleared.");}
+function checkOne(i){if(isInfeasible)return setStatus("Puzzle is infeasible. Undo to continue.");if(!clues[i])return;const line=getLine(Math.floor(i/n),i%n);if(line.every(x=>x>0)){checked.add(i);setStatus(visible(line)===clues[i]?"✓ Clue satisfied.":"✗ Clue does not match. Review your moves.");}else setStatus("This row or column is not complete yet.");render()}
+function render(){const b=$("board");b.style.setProperty("--n",n);b.style.setProperty("--count",n+2);b.replaceChildren();$("heading").textContent=n+" × "+n+" puzzle";
 function blank(){let e=document.createElement("span");e.className="blank";b.append(e)}
 function clue(i){let e=document.createElement("button");e.className="clue"+(!clues[i]?" unused":"")+(checked.has(i)?" "+(visible(getLine(Math.floor(i/n),i%n))===clues[i]?"ok":"pending"):"");e.textContent=clues[i]||"";e.disabled=!clues[i];e.setAttribute("aria-label","Check clue "+(i+1));e.onclick=()=>checkOne(i);b.append(e)}
 blank();for(let c=0;c<n;c++)clue(c);blank();
@@ -62,8 +127,11 @@ for(let r=0;r<n;r++){clue(2*n+r);for(let c=0;c<n;c++){let i=r*n+c,e=document.cre
 blank();for(let c=0;c<n;c++)clue(n+c);blank();
 const pad=$("pad");pad.replaceChildren();for(let v=1;v<=n;v++){let e=document.createElement("button");e.textContent=v;e.disabled=selected<0||!!grid[Math.floor(selected/n)]?.[selected%n]||!isValid(Math.floor(selected/n),selected%n,v);e.onclick=()=>setCell(v);pad.append(e)}
 }
-function load(){try{const raw=$("puzzle").value.trim(),groups=[...raw.matchAll(/"([^"]*)"/g)].map(x=>x[1]);if(!groups.length)throw Error("Expected a quoted clue string.");const a=groups[0].trim().split(/\s+/).map(Number),size=a.length/4;if(!Number.isInteger(size)||size<4||size>9||a.some(v=>!Number.isInteger(v)||v<0||v>size))throw Error("Invalid clues or size.");const values=groups.length>1?groups[1].trim().split(/\s+/).map(Number):Array(size*size).fill(0);if(values.length!==size*size||values.some(v=>!Number.isInteger(v)||v<0||v>size))throw Error("Invalid grid.");n=size;$("size").value=n;clues=a;initial=Array.from({length:n},(_,r)=>values.slice(r*n,(r+1)*n));grid=initial.map(row=>row.slice());for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(grid[r][c]&&!isValid(r,c,grid[r][c]))throw Error("Duplicate initial values.");selected=-1;history=[];moves=[];lastMove=-1;checked=new Set();closePicker();render();setStatus("Puzzle loaded.");}catch(e){setStatus("Unable to load puzzle: "+e.message)}}
-$("new").onclick=start;$("undo").onclick=()=>{if(!history.length)return setStatus("Nothing to undo.");grid=history.pop();moves.pop();lastMove=moves.length?moves[moves.length-1]:-1;checked.clear();closePicker();render();setStatus("Move undone.")};$("erase").onclick=()=>setCell(0);$("check").onclick=()=>{let incorrect=0,unfinished=0;clues.forEach((v,i)=>{if(!v)return;const line=getLine(Math.floor(i/n),i%n);if(line.some(x=>!x)){unfinished++;return}checked.add(i);if(visible(line)!==v)incorrect++});render();setStatus(incorrect?incorrect+" completed clues do not match.":unfinished? "All completed clues match; "+unfinished+" lines are unfinished.":"✓ All clues match.")};
+function load(){try{const raw=$("puzzle").value.trim(),groups=[...raw.matchAll(/"([^"]*)"/g)].map(x=>x[1]);if(!groups.length)throw Error("Expected a quoted clue string.");const a=groups[0].trim().split(/\s+/).map(Number),size=a.length/4;if(!Number.isInteger(size)||size<4||size>9||a.some(v=>!Number.isInteger(v)||v<0||v>size))throw Error("Invalid clues or size.");const values=groups.length>1?groups[1].trim().split(/\s+/).map(Number):Array(size*size).fill(0);if(values.length!==size*size||values.some(v=>!Number.isInteger(v)||v<0||v>size))throw Error("Invalid grid.");n=size;$("size").value=n;clues=a;initial=Array.from({length:n},(_,r)=>values.slice(r*n,(r+1)*n));grid=initial.map(row=>row.slice());for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(grid[r][c]&&!isValid(r,c,grid[r][c]))throw Error("Duplicate initial values.");selected=-1;history=[];moves=[];lastMove=-1;checked=new Set();invalidCandidates=new Map();isInfeasible=evaluateState();closePicker();render();setStatus(isInfeasible?"The initial puzzle is infeasible; check its clues and given cells.":"Puzzle loaded.");}catch(e){setStatus("Unable to load puzzle: "+e.message)}}
+$("new").onclick=start;$("undo").onclick=()=>{if(!history.length)return setStatus("Nothing to undo.");const invalid=isInfeasible;grid=history.pop();const move=moves.pop();lastMove=moves.length?moves[moves.length-1].index:-1;
+ if(invalid&&move){if(!invalidCandidates.has(move.index))invalidCandidates.set(move.index,new Set());invalidCandidates.get(move.index).add(move.value)}
+ isInfeasible=evaluateState();checked.clear();closePicker();render();
+ setStatus(invalid?"Invalid assignment undone and excluded from its cell's domain.":"Move undone.")};$("check").onclick=()=>{if(isInfeasible)return setStatus("Puzzle is infeasible. Undo to continue.");let incorrect=0,unfinished=0;clues.forEach((v,i)=>{if(!v)return;const line=getLine(Math.floor(i/n),i%n);if(line.some(x=>!x)){unfinished++;return}checked.add(i);if(visible(line)!==v)incorrect++});render();setStatus(incorrect?incorrect+" completed clues do not match.":unfinished? "All completed clues match; "+unfinished+" lines are unfinished.":"✓ All clues match.")};
 function closePicker(){$("picker").hidden=true}
 function openPicker(i){
  const r=Math.floor(i/n),c=i%n;selected=i;render();
@@ -84,6 +152,6 @@ window.addEventListener("resize",closePicker);
 $("domains").onclick=()=>{showDomains=!showDomains;$("domains").textContent=showDomains?"Hide domains":"Show domains";$("domains").setAttribute("aria-pressed",String(showDomains));render();setStatus(showDomains?"Showing row/column-available candidates in empty cells.":"Domains hidden.");};
 $("load").onclick=load;$("copy").onclick=async()=>{let s=puzzleText();$("puzzle").value=s;try{await navigator.clipboard.writeText(s);setStatus("Puzzle copied.")}catch{setStatus("Puzzle shown in text box; copy it from there.")}};
 for(const [input,out] of [["clue","clueOut"],["filled","filledOut"]])$(input).oninput=()=>$(out).textContent=$(input).value+"%";
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){closePicker();return}if(!$("picker").hidden||["TEXTAREA","INPUT","SELECT"].includes(document.activeElement?.tagName))return;if(/^\d$/.test(e.key)&&Number(e.key)<=n&&Number(e.key)>0)setCell(Number(e.key));else if(e.key==="Backspace"||e.key==="Delete")setCell(0);else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){$("undo").click();e.preventDefault()}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closePicker();return}if(!$("picker").hidden||["TEXTAREA","INPUT","SELECT"].includes(document.activeElement?.tagName))return;if(e.key==="Backspace"){e.preventDefault();$("undo").click();return;}if(/^\d$/.test(e.key)&&Number(e.key)<=n&&Number(e.key)>0)setCell(Number(e.key));else if(e.key==="Delete"){$("undo").click()}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){$("undo").click();e.preventDefault()}});
 start();
 </script></body></html>
