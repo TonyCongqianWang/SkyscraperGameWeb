@@ -39,7 +39,7 @@ a{color:#805115}
 .blank{background:transparent;border:1px solid transparent}
 .pad button,.actions button,.primary{border:1px solid #bb995c;background:#f0dfb9;color:#171717;border-radius:10px}
 .primary{background:#f0dfbd;color:#171717;border-color:#c9ac7d}.primary:hover{background:#e7d0a4}
-#status{color:#292018}#status.error{color:#b42318;font-weight:800}
+#status{color:#292018}#status.error{color:#b42318;font-weight:800}.cell.empty-domain{background:#f6ded8!important;box-shadow:inset 0 0 0 2px #d8a39a;color:#88463d}.cell.empty-domain::after{content:"×";position:absolute;inset:0;display:grid;place-items:center;font-size:clamp(24px,3vw,42px);font-weight:700;color:#b66f65;pointer-events:none}.clue.violated{color:#c04634!important;font-weight:900}
 #picker{background:#fff9ee;border-color:#b98634;color:#171717}
 .picker-pad button{background:#f1dfb8;color:#171717;border-color:#c7a56b}
 .domain-digit{color:#3c2b14}.domain-digit.off{opacity:.13}
@@ -64,7 +64,7 @@ a{color:#805115}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-let n=5,grid=[],initial=[],solution=[],clues=[],selected=-1,history=[],checked=new Set(),feedback="",moves=[],lastMove=-1,showDomains=false,invalidCandidates=new Map(),isInfeasible=false;
+let n=5,grid=[],initial=[],solution=[],clues=[],selected=-1,history=[],checked=new Set(),feedback="",moves=[],lastMove=-1,showDomains=false,invalidCandidates=new Map(),isInfeasible=false,diagnostics={empty:[],clues:[],missing:[]};
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function latin(size){const row=shuffle(Array.from({length:size},(_,i)=>i)),col=shuffle(Array.from({length:size},(_,i)=>i)),vals=shuffle(Array.from({length:size},(_,i)=>i+1));return row.map(r=>col.map(c=>vals[(r+c)%size]))}
 function visible(xs){let top=0,count=0;for(const x of xs){if(x>top){top=x;count++}}return count}
@@ -73,7 +73,7 @@ function computeClues(g){return Array.from({length:4*n},(_,i)=>visible(getLine(M
 function flatten(g){return g.flat().join(" ")}
 function puzzleText(){return '"'+clues.join(" ")+'" "'+flatten(initial)+'"'}
 function setStatus(t){feedback=t;$("status").textContent=t;$("status").classList.toggle("error",isInfeasible||/contradiction|infeasible|invalid puzzle/i.test(t))}
-function start(){n=Number($("size").value);solution=latin(n);clues=computeClues(solution);const p=Number($("clue").value)/100;clues=clues.map(v=>Math.random()<p?v:0);const f=Number($("filled").value)/100;initial=solution.map(row=>row.map(v=>Math.random()<f?v:0));grid=initial.map(row=>row.slice());history=[];moves=[];lastMove=-1;selected=-1;checked=new Set();invalidCandidates=new Map();isInfeasible=false;closePicker();render();setStatus("New puzzle ready. Select an empty square.");}
+function start(){n=Number($("size").value);solution=latin(n);clues=computeClues(solution);const p=Number($("clue").value)/100;clues=clues.map(v=>Math.random()<p?v:0);const f=Number($("filled").value)/100;initial=solution.map(row=>row.map(v=>Math.random()<f?v:0));grid=initial.map(row=>row.slice());history=[];moves=[];lastMove=-1;selected=-1;checked=new Set();invalidCandidates=new Map();isInfeasible=false;diagnostics={empty:[],clues:[],missing:[]};closePicker();render();setStatus("New puzzle ready. Select an empty square.");}
 function isValid(row,col,value){
  if(!value)return true;
  if(invalidCandidates.get(row*n+col)?.has(value))return false;
@@ -108,22 +108,26 @@ function constraintFeasible(index){
  }
  return true;
 }
-function evaluateState(){
- for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(!grid[r][c]&&!domain(r,c).length)return true;
+function evaluateDiagnostics(){
+ const found={empty:[],clues:[],missing:[]};
+ for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(!grid[r][c]&&!domain(r,c).length)found.empty.push(r*n+c);
  for(let i=0;i<n;i++)for(let v=1;v<=n;v++){
-   if(!grid[i].includes(v)&&!grid[i].some((x,c)=>!x&&isValid(i,c,v)))return true;
-   if(!grid.some(row=>row[i]===v)&&!grid.some((row,r)=>!row[i]&&isValid(r,i,v)))return true;
+   if(!grid[i].includes(v)&&!grid[i].some((x,c)=>!x&&isValid(i,c,v)))found.missing.push("row "+(i+1)+": "+v);
+   if(!grid.some(row=>row[i]===v)&&!grid.some((row,r)=>!row[i]&&isValid(r,i,v)))found.missing.push("column "+(i+1)+": "+v);
  }
- return clues.some((v,i)=>v&&!constraintFeasible(i));
+ clues.forEach((v,i)=>{if(v&&!constraintFeasible(i))found.clues.push(i)});
+ return found;
 }
+function evaluateState(){diagnostics=evaluateDiagnostics();return !!(diagnostics.empty.length||diagnostics.clues.length||diagnostics.missing.length)}
+function diagnosticMessage(){const parts=[];if(diagnostics.empty.length)parts.push(diagnostics.empty.length+" empty domain(s)");if(diagnostics.clues.length)parts.push(diagnostics.clues.length+" violated clue(s)");if(diagnostics.missing.length)parts.push(diagnostics.missing.length+" missing row/column value(s)");return parts.join(", ")}
 
-function setCell(value){if(isInfeasible)return setStatus("This state is infeasible. Undo the last move to continue.");if(selected<0)return setStatus("Select an empty cell first.");const r=Math.floor(selected/n),c=selected%n;if(initial[r][c])return setStatus("Given cells cannot be changed.");if(grid[r][c])return setStatus("This cell is already filled. Only the most recent move can be removed using Undo.");if(value&&(!Number.isInteger(value)||value<1||value>n||!isValid(r,c,value)))return setStatus("That number is already used in this row or column.");if(grid[r][c]===value)return;history.push(grid.map(row=>row.slice()));moves.push({index:selected,value});lastMove=selected;grid[r][c]=value;checked.clear();isInfeasible=evaluateState();render();if(isInfeasible)return setStatus("Contradiction detected. Undo the last move to continue; its assignment will be marked invalid.");if(grid.every(row=>row.every(x=>x>0))){const bad=clues.some((v,i)=>v&&visible(getLine(Math.floor(i/n),i%n))!==v);setStatus(bad?"Grid filled, but one or more edge clues do not match.":"✓ Solved! All rows, columns and clues match.");}else setStatus(value?"Number entered.":"Cell cleared.");}
+function setCell(value){if(isInfeasible)return setStatus("This state is infeasible ("+diagnosticMessage()+"). Undo the last move to continue.");if(selected<0)return setStatus("Select an empty cell first.");const r=Math.floor(selected/n),c=selected%n;if(initial[r][c])return setStatus("Given cells cannot be changed.");if(grid[r][c])return setStatus("This cell is already filled. Only the most recent move can be removed using Undo.");if(value&&(!Number.isInteger(value)||value<1||value>n||!isValid(r,c,value)))return setStatus("That number is already used in this row or column.");if(grid[r][c]===value)return;history.push(grid.map(row=>row.slice()));moves.push({index:selected,value});lastMove=selected;grid[r][c]=value;checked.clear();isInfeasible=evaluateState();render();if(isInfeasible)return setStatus("Contradiction: "+diagnosticMessage()+". Undo the last move to continue; its assignment will be marked invalid.");if(grid.every(row=>row.every(x=>x>0))){const bad=clues.some((v,i)=>v&&visible(getLine(Math.floor(i/n),i%n))!==v);setStatus(bad?"Grid filled, but one or more edge clues do not match.":"✓ Solved! All rows, columns and clues match.");}else setStatus(value?"Number entered.":"Cell cleared.");}
 function checkOne(i){if(isInfeasible)return setStatus("Puzzle is infeasible. Undo to continue.");if(!clues[i])return;const line=getLine(Math.floor(i/n),i%n);if(line.every(x=>x>0)){checked.add(i);setStatus(visible(line)===clues[i]?"✓ Clue satisfied.":"✗ Clue does not match. Review your moves.");}else setStatus("This row or column is not complete yet.");render()}
 function render(){const b=$("board");b.style.setProperty("--n",n);b.style.setProperty("--count",n+2);b.replaceChildren();$("heading").textContent=n+" × "+n+" puzzle";
 function blank(){let e=document.createElement("span");e.className="blank";b.append(e)}
-function clue(i){let e=document.createElement("button");e.className="clue"+(!clues[i]?" unused":"")+(checked.has(i)?" "+(visible(getLine(Math.floor(i/n),i%n))===clues[i]?"ok":"pending"):"");e.textContent=clues[i]||"";e.disabled=!clues[i];e.setAttribute("aria-label","Check clue "+(i+1));e.onclick=()=>checkOne(i);b.append(e)}
+function clue(i){let e=document.createElement("button");e.className="clue"+(diagnostics.clues.includes(i)?" violated":"")+(!clues[i]?" unused":"")+(checked.has(i)?" "+(visible(getLine(Math.floor(i/n),i%n))===clues[i]?"ok":"pending"):"");e.textContent=clues[i]||"";e.disabled=!clues[i];e.setAttribute("aria-label","Check clue "+(i+1));e.onclick=()=>checkOne(i);b.append(e)}
 blank();for(let c=0;c<n;c++)clue(c);blank();
-for(let r=0;r<n;r++){clue(2*n+r);for(let c=0;c<n;c++){let i=r*n+c,e=document.createElement("button");e.className="cell"+(selected===i?" active":"")+(initial[r][c]?" given":"")+(lastMove===i?" latest":"")+(isInfeasible&&lastMove===i?" contradiction":"");if(showDomains&&!grid[r][c]){e.classList.add("domains");e.style.setProperty("--domain-cols",Math.ceil(Math.sqrt(n)));for(let v=1;v<=n;v++){const digit=document.createElement("span");digit.className="domain-digit"+(isValid(r,c,v)?"":" off");digit.textContent=v;e.append(digit)}}else e.textContent=grid[r][c]||"";e.setAttribute("aria-label","Row "+(r+1)+" column "+(c+1)+" value "+(grid[r][c]||"empty"));e.onclick=()=>{selected=i;render();if(grid[r][c])setStatus(initial[r][c]?"Given cells cannot be changed.":"Already filled. Only Undo can remove your last move.");};e.ondblclick=()=>openPicker(i);b.append(e)}clue(3*n+r)}
+for(let r=0;r<n;r++){clue(2*n+r);for(let c=0;c<n;c++){let i=r*n+c,e=document.createElement("button");e.className="cell"+(selected===i?" active":"")+(initial[r][c]?" given":"")+(lastMove===i?" latest":"")+(isInfeasible&&lastMove===i?" contradiction":"")+(diagnostics.empty.includes(i)?" empty-domain":"");if(showDomains&&!grid[r][c]){e.classList.add("domains");e.style.setProperty("--domain-cols",Math.ceil(Math.sqrt(n)));for(let v=1;v<=n;v++){const digit=document.createElement("span");digit.className="domain-digit"+(isValid(r,c,v)?"":" off");digit.textContent=v;e.append(digit)}}else e.textContent=grid[r][c]||"";e.setAttribute("aria-label","Row "+(r+1)+" column "+(c+1)+" value "+(grid[r][c]||"empty"));e.onclick=()=>{selected=i;render();if(grid[r][c])setStatus(initial[r][c]?"Given cells cannot be changed.":"Already filled. Only Undo can remove your last move.");};e.ondblclick=()=>openPicker(i);b.append(e)}clue(3*n+r)}
 blank();for(let c=0;c<n;c++)clue(n+c);blank();
 const pad=$("pad");pad.replaceChildren();for(let v=1;v<=n;v++){let e=document.createElement("button");e.textContent=v;e.disabled=selected<0||!!grid[Math.floor(selected/n)]?.[selected%n]||!isValid(Math.floor(selected/n),selected%n,v);e.onclick=()=>setCell(v);pad.append(e)}
 }
@@ -131,7 +135,7 @@ function load(){try{const raw=$("puzzle").value.trim(),groups=[...raw.matchAll(/
 $("new").onclick=start;$("undo").onclick=()=>{if(!history.length)return setStatus(isInfeasible?"The initial puzzle is infeasible; load a different puzzle.":"Nothing to undo.");const invalid=isInfeasible;grid=history.pop();const move=moves.pop();lastMove=moves.length?moves[moves.length-1].index:-1;
  if(invalid&&move){if(!invalidCandidates.has(move.index))invalidCandidates.set(move.index,new Set());invalidCandidates.get(move.index).add(move.value)}
  isInfeasible=evaluateState();checked.clear();closePicker();render();
- if(isInfeasible)setStatus("Contradiction remains after undo. The current last move is highlighted; undo again to continue.");
+ if(isInfeasible)setStatus("Contradiction remains after undo: "+diagnosticMessage()+". Undo again to continue.");
  else setStatus(invalid?"Invalid assignment undone and excluded from its cell's domain.":"Move undone.")};$("check").onclick=()=>{if(isInfeasible)return setStatus("Puzzle is infeasible. Undo to continue.");let incorrect=0,unfinished=0;clues.forEach((v,i)=>{if(!v)return;const line=getLine(Math.floor(i/n),i%n);if(line.some(x=>!x)){unfinished++;return}checked.add(i);if(visible(line)!==v)incorrect++});render();setStatus(incorrect?incorrect+" completed clues do not match.":unfinished? "All completed clues match; "+unfinished+" lines are unfinished.":"✓ All clues match.")};
 function closePicker(){$("picker").hidden=true}
 function openPicker(i){
