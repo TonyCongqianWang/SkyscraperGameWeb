@@ -123,6 +123,7 @@ async function start(timeout=10000){
    return (await getApi()).getRandomPuzzle({size,difficulty});
   })(),timeout);
   if(id!==requestId)return;
+  if(timeout===1000&&(history.length||moves.length))return; // Do not replace active play on startup.
   applyCurated(puzzle,size);showLocalControls(false);
   setStatus("Curated "+difficulty.replaceAll("_"," ")+" puzzle ready. Select an empty square.");
  }catch(error){
