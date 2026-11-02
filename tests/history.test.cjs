@@ -6,7 +6,7 @@ const vm = require('node:vm');
 
 function engine() {
   const html = fs.readFileSync(require('node:path').join(__dirname, '../index.html'), 'utf8');
-  const script = html.match(/<script(?:\\s[^>]*)?>([\\s\\S]*?)<\\/script>/i);
+  const script = html.match(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/i);
   assert.ok(script, 'inline game engine script found');
   const sandbox = vm.createContext({});
   // Extract only the pure state management functions from the browser script.
