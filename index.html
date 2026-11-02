@@ -38,7 +38,7 @@ a{color:#805115}
 .clue.ok{color:#16a34a!important}.clue.pending{color:#bb3b2b!important}
 .blank{background:transparent;border:1px solid transparent}
 .pad button,.actions button,.primary{border:1px solid #bb995c;background:#f0dfb9;color:#171717;border-radius:10px}
-.primary{background:#f0dfbd;color:#171717;border-color:#c9ac7d}.primary:hover{background:#e7d0a4}#retry{width:100%;padding:9px;border:1px solid #bb995c;background:#fff4df;border-radius:9px;cursor:pointer}#retry[hidden]{display:none}select option:disabled{color:#999}
+.primary{background:#f0dfbd;color:#171717;border-color:#c9ac7d}.primary:hover{background:#e7d0a4}#retry{width:100%;padding:9px;border:1px solid #bb995c;background:#fff4df;border-radius:9px;cursor:pointer}#local-controls{display:flex;flex-direction:column;gap:10px;border-top:1px solid #d8c8ae;padding-top:12px}#local-controls[hidden]{display:none}select option:disabled{color:#999}
 #status{color:#292018}#status.error{color:#b42318;font-weight:800}.cell.empty-domain{background:#f6ded8!important;box-shadow:inset 0 0 0 2px #d8a39a;color:#88463d}.cell.empty-domain::after{
   content:"×";
   position:absolute;
@@ -63,10 +63,10 @@ a{color:#805115}
 <h2 id="heading">Puzzle</h2><div id="board" class="board" aria-label="Skyscrapers puzzle"></div>
 <div class="pad" id="pad"></div><div class="actions"><button id="undo">↶ Undo</button><button id="check">Check clues</button><button id="domains" aria-pressed="false">Show domains</button></div>
 <p id="status" role="status" aria-live="polite"></p>
-</main><aside class="panel controls"><h2>New puzzle</h2><label for="size">Grid size</label><select id="size"><option>4</option><option selected>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select>
-<label for="difficulty">Difficulty</label><select id="difficulty" disabled><option>Loading availability…</option></select>
+</main><aside class="panel controls"><h2>New puzzle</h2><label for="size">Grid size <output id="sizeOut">5 × 5</output></label><input id="size" type="range" min="4" max="9" step="1" value="5">
+<label for="difficulty">Difficulty <output id="difficultyOut">Loading…</output></label><input id="difficulty" type="range" min="0" max="6" step="1" value="2" disabled><p id="difficultyCount" class="sub"></p>
 <p id="availability" class="sub" role="status">Loading curated puzzle availability…</p>
-<button id="new" class="primary">New curated puzzle</button><button id="retry" hidden>Retry curated puzzle</button>
+<button id="new" class="primary">New curated puzzle</button><div id="local-controls" hidden><h3>Local puzzle generator</h3><label for="clue">Visibility clues <output id="clueOut">85%</output></label><input id="clue" type="range" min="30" max="100" step="5" value="85"><label for="filled">Given cells <output id="filledOut">30%</output></label><input id="filled" type="range" min="0" max="75" step="5" value="30"><button id="local-new" class="primary">Generate local puzzle</button><button id="retry" type="button">Retry curated puzzle</button></div>
 <p class="sub">Curated puzzles come from SkyscraperSolver. If fetching fails, a locally generated puzzle is used; its difficulty and uniqueness are not guaranteed.</p>
 <h3>Share a puzzle</h3><textarea id="puzzle" rows="3" placeholder="Puzzle string: quoted clues and optional grid"></textarea><button id="load">Load puzzle</button><button id="copy">Copy puzzle</button>
 <h3>How to play</h3><p class="sub">Fill every row and column with heights 1 through N, without duplicates. Edge clues tell you how many skyscrapers are visible from that side. Taller buildings hide smaller ones. Click an edge clue to check that view. Double-click a cell to open a nearby number pad. <a href="https://github.com/TonyCongqianWang/SkyscraperGame#game-objective">More detailed illustrated rules ↗</a></p>
@@ -86,32 +86,40 @@ function puzzleText(){return '"'+clues.join(" ")+'" "'+flatten(initial)+'"'}
 function setStatus(t){feedback=t;$("status").textContent=t;$("status").classList.toggle("error",isInfeasible||/contradiction|infeasible|invalid puzzle/i.test(t))}
 const API_URL="https://tonycongqianwang.github.io/SkyscraperSolver/puzzle-bank/curated/v1/api.js";
 const LEVELS=[["very_easy","Very easy"],["easy","Easy"],["medium","Medium"],["hard","Hard"],["very_hard","Very hard"],["extreme","Extreme"],["impossible","Impossible"]];
-let curatedApi=null,metadata=null,requestId=0;
+let curatedApi=null,metadata=null,requestId=0;\nfunction showLocalControls(show){$("local-controls").hidden=!show;$("new").hidden=show;}
 function resetBoard(){grid=initial.map(row=>row.slice());history=[];moves=[];lastMove=-1;selected=-1;checked=new Set();invalidCandidates=new Map();isInfeasible=evaluateState();diagnostics=isInfeasible?diagnostics:{empty:[],clues:[],missing:[]};closePicker();render();}
-function startLocal(){n=Number($("size").value);solution=latin(n);clues=computeClues(solution).map(v=>Math.random()<.85?v:0);initial=solution.map(row=>row.map(v=>Math.random()<.3?v:0));resetBoard();}
+function startLocal(){n=Number($("size").value);solution=latin(n);const p=Number($("clue").value)/100,f=Number($("filled").value)/100;clues=computeClues(solution).map(v=>Math.random()<p?v:0);initial=solution.map(row=>row.map(v=>Math.random()<f?v:0));resetBoard();}
 function applyCurated(puzzle,size){if(!Array.isArray(puzzle.clues)||puzzle.clues.length!==4*size||!Array.isArray(puzzle.givens)||puzzle.givens.length!==size*size||!Array.isArray(puzzle.canonical_solution)||puzzle.canonical_solution.length!==size*size)throw Error("Invalid puzzle dimensions");
  const valid=(values)=>values.every(v=>Number.isInteger(v)&&v>=0&&v<=size);
  if(!valid(puzzle.clues)||!valid(puzzle.givens)||!puzzle.canonical_solution.every(v=>Number.isInteger(v)&&v>=1&&v<=size))throw Error("Invalid puzzle values");
  n=size;clues=puzzle.clues.slice();solution=Array.from({length:n},(_,r)=>puzzle.canonical_solution.slice(r*n,(r+1)*n));initial=Array.from({length:n},(_,r)=>puzzle.givens.slice(r*n,(r+1)*n));resetBoard();
 }
-function updateAvailability(){const size=String($("size").value),select=$("difficulty"),previous=select.value,counts=metadata?.sizes?.[size];select.replaceChildren();
- for(const [key,label] of LEVELS){const option=document.createElement("option");option.value=key;const count=counts?.[key]??0;option.textContent=label+(metadata?" ("+count+")":"");option.disabled=!!metadata&&!count;select.append(option)}
- const available=LEVELS.filter(([key])=>(counts?.[key]??0)>0).map(([key])=>key);
- select.value=available.includes(previous)?previous:(available.includes("medium")?"medium":available[0]||"");
- select.disabled=!metadata||!available.length;
- $("availability").textContent=!metadata?"Curated availability unavailable; local puzzles are still playable.":available.length?"Available curated puzzles: "+available.reduce((total,key)=>total+counts[key],0)+" for "+size+"×"+size+".":"No curated puzzles available for "+size+"×"+size+".";
+function selectedDifficulty(){return LEVELS[Number($("difficulty").value)][0];}
+function updateAvailability(){
+ const size=String($("size").value),counts=metadata?.sizes?.[size],slider=$("difficulty");
+ $("sizeOut").textContent=size+" × "+size;
+ const available=LEVELS.map(([key],index)=>({key,index,count:counts?.[key]??0})).filter(item=>item.count>0);
+ if(metadata&&available.length&&!available.some(item=>item.index===Number(slider.value))){
+   const current=Number(slider.value);slider.value=available.reduce((best,item)=>Math.abs(item.index-current)<Math.abs(best.index-current)?item:best).index;
+ }
+ slider.disabled=!metadata||!available.length;
+ const key=selectedDifficulty(),count=counts?.[key]??0;
+ $("difficultyOut").textContent=LEVELS[Number(slider.value)][1];
+ $("difficultyCount").textContent=metadata?(count?count+" puzzles available": "No puzzles at this difficulty; move the slider to an available level."):"Availability not loaded";
+ $("new").disabled=!!metadata&&!available.length;
+ $("availability").textContent=!metadata?"Curated availability unavailable; local puzzles are still playable.":available.length?"Available curated puzzles: "+available.reduce((total,item)=>total+item.count,0)+" for "+size+"×"+size+".":"No curated puzzles available for "+size+"×"+size+".";
 }
 async function getApi(){if(!curatedApi)curatedApi=import(API_URL).catch(error=>{curatedApi=null;throw error});return curatedApi;}
 async function refreshMetadata(){try{const api=await getApi();metadata=await api.getMetadata();updateAvailability();}catch(error){metadata=null;updateAvailability();$("availability").textContent="Unable to load curated availability. Local generation remains available.";}}
-async function start(){const id=++requestId,size=Number($("size").value),difficulty=$("difficulty").value;
- $("new").disabled=true;$("retry").hidden=true;setStatus("Fetching curated puzzle…");
+async function start(){const id=++requestId,size=Number($("size").value),difficulty=selectedDifficulty();
+ $("new").disabled=true;$("retry").disabled=true;setStatus("Fetching curated puzzle…");
  try{if(!metadata)await refreshMetadata();if(id!==requestId)return;
  if(!metadata)throw Error("Availability request failed");
  if(!(metadata.sizes?.[String(size)]?.[difficulty]>0))throw Error("No curated puzzles for this selection");
  const puzzle=await (await getApi()).getRandomPuzzle({size,difficulty});
- if(id!==requestId)return;applyCurated(puzzle,size);setStatus("Curated "+difficulty.replaceAll("_"," ")+" puzzle ready. Select an empty square.");
- }catch(error){if(id!==requestId)return;startLocal();$("retry").hidden=false;setStatus("Curated puzzles are temporarily unavailable. A locally generated puzzle has been loaded instead. Its difficulty and uniqueness are not guaranteed. Retry curated puzzle when ready.");}
- finally{if(id===requestId)$("new").disabled=false;}
+ if(id!==requestId)return;applyCurated(puzzle,size);showLocalControls(false);setStatus("Curated "+difficulty.replaceAll("_"," ")+" puzzle ready. Select an empty square.");
+ }catch(error){if(id!==requestId)return;startLocal();showLocalControls(true);setStatus("Curated puzzles are temporarily unavailable. A locally generated puzzle has been loaded instead. Its difficulty and uniqueness are not guaranteed. Retry curated puzzle when ready.");}
+ finally{if(id===requestId){$("new").disabled=false;$("retry").disabled=false;}}
 }
 
 function isValid(row,col,value){
@@ -178,8 +186,8 @@ for(let r=0;r<n;r++){clue(2*n+r);for(let c=0;c<n;c++){let i=r*n+c,e=document.cre
 blank();for(let c=0;c<n;c++)clue(n+c);blank();
 const pad=$("pad");pad.replaceChildren();for(let v=1;v<=n;v++){let e=document.createElement("button");e.textContent=v;e.disabled=selected<0||!!grid[Math.floor(selected/n)]?.[selected%n]||!isValid(Math.floor(selected/n),selected%n,v);e.onclick=()=>setCell(v);pad.append(e)}
 }
-function load(){try{const raw=$("puzzle").value.trim(),groups=[...raw.matchAll(/"([^"]*)"/g)].map(x=>x[1]);if(!groups.length)throw Error("Expected a quoted clue string.");const a=groups[0].trim().split(/\s+/).map(Number),size=a.length/4;if(!Number.isInteger(size)||size<4||size>9||a.some(v=>!Number.isInteger(v)||v<0||v>size))throw Error("Invalid clues or size.");const values=groups.length>1?groups[1].trim().split(/\s+/).map(Number):Array(size*size).fill(0);if(values.length!==size*size||values.some(v=>!Number.isInteger(v)||v<0||v>size))throw Error("Invalid grid.");n=size;$("size").value=n;clues=a;initial=Array.from({length:n},(_,r)=>values.slice(r*n,(r+1)*n));grid=initial.map(row=>row.slice());invalidCandidates=new Map();for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(grid[r][c]&&!isValid(r,c,grid[r][c]))throw Error("Duplicate initial values.");selected=-1;history=[];moves=[];lastMove=-1;checked=new Set();invalidCandidates=new Map();isInfeasible=evaluateState();closePicker();render();setStatus(isInfeasible?"The initial puzzle is infeasible; check its clues and given cells.":"Puzzle loaded.");}catch(e){setStatus("Unable to load puzzle: "+e.message)}}
-$("new").onclick=start;$("retry").onclick=start;$("size").onchange=()=>{updateAvailability();};$("undo").onclick=()=>{if(!history.length)return setStatus(isInfeasible?"The initial puzzle is infeasible; load a different puzzle.":"Nothing to undo.");const invalid=isInfeasible;grid=history.pop();const move=moves.pop();lastMove=moves.length?moves[moves.length-1].index:-1;
+function load(){try{const raw=$("puzzle").value.trim(),groups=[...raw.matchAll(/"([^"]*)"/g)].map(x=>x[1]);if(!groups.length)throw Error("Expected a quoted clue string.");const a=groups[0].trim().split(/\s+/).map(Number),size=a.length/4;if(!Number.isInteger(size)||size<4||size>9||a.some(v=>!Number.isInteger(v)||v<0||v>size))throw Error("Invalid clues or size.");const values=groups.length>1?groups[1].trim().split(/\s+/).map(Number):Array(size*size).fill(0);if(values.length!==size*size||values.some(v=>!Number.isInteger(v)||v<0||v>size))throw Error("Invalid grid.");n=size;$("size").value=n;updateAvailability();clues=a;initial=Array.from({length:n},(_,r)=>values.slice(r*n,(r+1)*n));grid=initial.map(row=>row.slice());invalidCandidates=new Map();for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(grid[r][c]&&!isValid(r,c,grid[r][c]))throw Error("Duplicate initial values.");selected=-1;history=[];moves=[];lastMove=-1;checked=new Set();invalidCandidates=new Map();isInfeasible=evaluateState();closePicker();render();setStatus(isInfeasible?"The initial puzzle is infeasible; check its clues and given cells.":"Puzzle loaded.");}catch(e){setStatus("Unable to load puzzle: "+e.message)}}
+$("new").onclick=start;$("retry").onclick=start;$("local-new").onclick=()=>{++requestId;startLocal();setStatus("Locally generated puzzle ready. Its difficulty and uniqueness are not guaranteed.");};$("size").oninput=updateAvailability;$("difficulty").oninput=()=>{const counts=metadata?.sizes?.[String($("size").value)];if(counts){const current=Number($("difficulty").value),available=LEVELS.map(([key],index)=>({index,count:counts[key]??0})).filter(x=>x.count>0);if(available.length&&!available.some(x=>x.index===current))$("difficulty").value=available.reduce((best,x)=>Math.abs(x.index-current)<Math.abs(best.index-current)?x:best).index;}updateAvailability();};$("undo").onclick=()=>{if(!history.length)return setStatus(isInfeasible?"The initial puzzle is infeasible; load a different puzzle.":"Nothing to undo.");const invalid=isInfeasible;grid=history.pop();const move=moves.pop();lastMove=moves.length?moves[moves.length-1].index:-1;
  if(invalid&&move){if(!invalidCandidates.has(move.index))invalidCandidates.set(move.index,new Set());invalidCandidates.get(move.index).add(move.value)}
  isInfeasible=evaluateState();checked.clear();closePicker();render();
  if(isInfeasible)setStatus("Contradiction remains after undo: "+diagnosticMessage()+". Undo again to continue.");
@@ -204,6 +212,6 @@ window.addEventListener("resize",closePicker);
 $("domains").onclick=()=>{showDomains=!showDomains;$("domains").textContent=showDomains?"Hide domains":"Show domains";$("domains").setAttribute("aria-pressed",String(showDomains));render();setStatus(showDomains?"Showing row/column-available candidates in empty cells.":"Domains hidden.");};
 $("load").onclick=load;$("copy").onclick=async()=>{let s=puzzleText();$("puzzle").value=s;try{await navigator.clipboard.writeText(s);setStatus("Puzzle copied.")}catch{setStatus("Puzzle shown in text box; copy it from there.")}};
 
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){closePicker();return}if(["TEXTAREA","INPUT","SELECT"].includes(document.activeElement?.tagName))return;if(e.key==="Backspace"){e.preventDefault();$("undo").click();return;}if(/^\d$/.test(e.key)&&Number(e.key)<=n&&Number(e.key)>0){if(!$("picker").hidden)closePicker();setCell(Number(e.key));}else if(e.key==="Delete"){$("undo").click()}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){$("undo").click();e.preventDefault()}});
+for(const [input,out] of [["clue","clueOut"],["filled","filledOut"]])$(input).oninput=()=>$(out).textContent=$(input).value+"%";\ndocument.addEventListener("keydown",e=>{if(e.key==="Escape"){closePicker();return}if(["TEXTAREA","INPUT","SELECT"].includes(document.activeElement?.tagName))return;if(e.key==="Backspace"){e.preventDefault();$("undo").click();return;}if(/^\d$/.test(e.key)&&Number(e.key)<=n&&Number(e.key)>0){if(!$("picker").hidden)closePicker();setCell(Number(e.key));}else if(e.key==="Delete"){$("undo").click()}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){$("undo").click();e.preventDefault()}});
 updateAvailability();refreshMetadata().then(()=>start());
 </script></body></html>
