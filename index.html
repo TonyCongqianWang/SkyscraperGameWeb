@@ -123,10 +123,10 @@ async function checkAvailability(timeout=1000){
   const info=await withTimeout(refreshMetadata(),timeout);
   metadata=info;updateAvailability();
   $("availability").textContent="Curated puzzles are ready to load. Your current local puzzle will stay until you choose a curated one.";
-  setStatus("Curated puzzles are available. Choose New curated puzzle whenever you're ready.");
+
  }catch(error){
   if(!metadata){updateAvailability();$("availability").textContent="Curated availability could not be reached. You can keep playing locally or retry.";}
-  setStatus("Local puzzle ready. Curated availability could not be confirmed.");
+
  }
 }
 async function start(timeout=10000){
@@ -151,7 +151,7 @@ async function start(timeout=10000){
 }
 function beginStartup(){
  startLocal();showLocalControls(true);
- setStatus("Local puzzle ready. Checking curated availability (up to 1 second)…");
+ setStatus("Local puzzle ready. Select an empty square.");
  checkAvailability(1000);
 }
 
