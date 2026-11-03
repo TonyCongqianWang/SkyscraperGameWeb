@@ -171,6 +171,21 @@ footer{display:block;text-align:center;margin:auto 0 0;padding-top:9px}
  .actions{grid-template-columns:repeat(2,max-content)}
  .actions button:last-child{grid-column:1/-1;justify-self:center}
 }
+
+/* Fixed-height puzzle metadata: puzzle IDs never shift the board or game panel. */
+.game-meta{margin-top:auto;min-width:0;display:grid;grid-template-rows:18px 16px;align-content:end}
+.game-meta #puzzle-id{grid-row:1;min-width:0;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:18px}
+.game-meta #puzzle-id[hidden]{display:block;visibility:hidden}
+.game-meta .help-wrap{grid-row:2;justify-self:start;align-self:center;margin:0;padding:0;line-height:16px}
+.game-meta #help-toggle{display:inline-block;vertical-align:top;line-height:14px;padding:0}
+.controls>h2{font-size:20px;line-height:1.2;font-weight:750}
+.controls>h3{font-size:20px;line-height:1.2;font-weight:750;letter-spacing:0}
+.controls label{font-size:11px;font-weight:600}
+#local-controls label{font-size:11px}
+/* On very short desktop windows, stop shrinking the grid; permit scrolling. */
+@media(min-width:901px) and (max-height:449px){
+ .board-stage{width:min(100%,max(260px,calc(100dvh - 290px)))}
+}
 </style>
 </head>
 <body><div class="wrap">
@@ -179,13 +194,13 @@ footer{display:block;text-align:center;margin:auto 0 0;padding-top:9px}
 
 <section id="statistics" class="statistics" aria-label="Puzzle statistics" hidden><div class="statistics-head"><h3>Statistics</h3><button id="stats-close" type="button" aria-label="Hide statistics">×</button></div><dl><dt>Time</dt><dd id="stat-time">00:00:00</dd><dt>Inserts</dt><dd id="stat-inserts">0</dd><dt>Undos</dt><dd id="stat-undos">0</dd><dt>Dead ends</dt><dd id="stat-dead-ends">0</dd><dt>Solution peeked</dt><dd id="stat-solution">No</dd><dt>Domain assist</dt><dd id="stat-domains">No</dd></dl></section><section id="help-popup" class="help-popup" hidden><div class="help-top"><strong>How to play</strong><button id="help-close" type="button" aria-label="Close instructions">×</button></div><p>Place heights 1–N once in each row and column. Edge numbers show how many buildings you can see looking inward; taller ones hide those behind them.</p><p>Select a square and enter a number, or double-click it for a picker. Click a clue to check its view. <a href="https://github.com/TonyCongqianWang/SkyscraperGame#game-objective">Illustrated rules ↗</a></p></section></div>
 <div class="pad" id="pad"></div><div class="actions"><button id="undo">↶ Undo</button><button id="show-solution">Show solution</button><button id="check">Check clues</button><button id="domains" aria-pressed="false">Show domains</button><button id="stats-toggle" aria-controls="statistics" aria-expanded="false">Statistics</button></div>
-<p id="status" role="status" aria-live="polite"></p><p id="puzzle-id" class="sub" hidden></p>
-<div class="help-wrap"><button id="help-toggle" type="button" aria-expanded="false" aria-controls="help-popup">How to play?</button></div></main><aside class="panel controls"><h2>New puzzle</h2><label for="size">Grid size <output id="sizeOut">5 × 5</output></label><input id="size" type="range" min="4" max="9" step="1" value="5">
+<p id="status" role="status" aria-live="polite"></p>
+<div class="game-meta"><p id="puzzle-id" class="sub" hidden></p><div class="help-wrap"><button id="help-toggle" type="button" aria-expanded="false" aria-controls="help-popup">How to play?</button></div></div></main><aside class="panel controls"><h2>New puzzle</h2><label for="size">Grid size <output id="sizeOut">5 × 5</output></label><input id="size" type="range" min="4" max="9" step="1" value="5">
 <label for="difficulty">Difficulty <output id="difficultyOut">Loading…</output></label><input id="difficulty" type="range" min="0" max="7" step="1" value="2" disabled><p id="difficultyCount" class="sub"></p>
 <p id="availability" class="sub" role="status">Loading curated puzzle availability…</p>
 <button id="new" class="primary">New curated puzzle</button><div id="local-controls" hidden><label for="clue">Visibility clues <output id="clueOut">85%</output></label><input id="clue" type="range" min="30" max="100" step="5" value="85"><label for="filled">Given cells <output id="filledOut">30%</output></label><input id="filled" type="range" min="0" max="75" step="5" value="30"><button id="local-new" class="primary">Generate local puzzle</button><button id="retry" type="button">Retry curated puzzle</button></div>
 
-<h3>Share a puzzle</h3><textarea id="puzzle" rows="3" placeholder="Puzzle ID or quoted clues and optional grid"></textarea><button id="load">Load puzzle</button><button id="copy">Copy puzzle</button>
+<h3>Load puzzle</h3><textarea id="puzzle" rows="3" placeholder="Puzzle ID or quoted clues and optional grid"></textarea><button id="load">Load puzzle</button><button id="copy">Copy puzzle</button>
 </aside></div><footer>Based on <a href="https://github.com/TonyCongqianWang/SkyscraperGame">SkyscraperGame</a> · Curated puzzles by <a href="https://github.com/TonyCongqianWang/SkyscraperSolver">SkyscraperSolver</a> · <a href="https://github.com/TonyCongqianWang/SkyscraperGameWeb">GitHub ↗</a></footer></div>
 <div id="picker" role="dialog" aria-label="Enter building height" hidden><h3 id="picker-title">Choose a height</h3><div class="picker-pad" id="picker-pad"></div><button class="picker-close" id="picker-close">Cancel (Esc)</button></div>
 <script>
@@ -256,12 +271,13 @@ function undoLoad(){
  window.history.replaceState(null,"",state.url);
  $("puzzle-id").hidden=!state.puzzleId;
  $("puzzle-id").textContent=state.puzzleId?"Puzzle ID: "+state.puzzleId:"";
+ $("puzzle-id").title=$("puzzle-id").textContent;
  showLocalControls(state.localControlsVisible);
  updateAvailability();
  $("domains").textContent=showDomains?"Hide domains":"Show domains";
  $("domains").setAttribute("aria-pressed",String(showDomains));
  closePicker();render();showStatistics(state.statsVisible);
- setStatus(state.feedback);
+ setStatus("Previous puzzle restored. Your progress is intact.");
 }
 function toggleHelp(show){$("help-popup").hidden=!show;$("help-toggle").setAttribute("aria-expanded",String(show));if(show&&!$("statistics").hidden)showStatistics(false)}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
@@ -282,6 +298,7 @@ let curatedApi=null,metadata=null,requestId=0,solutionKnown=false,pendingPuzzleI
 function setPuzzleIdentity(id,{preserveUrl=false}={}){
  $("puzzle-id").hidden=!id;
  $("puzzle-id").textContent=id?"Puzzle ID: "+id:"";
+ $("puzzle-id").title=id?"Puzzle ID: "+id:"";
  if(preserveUrl)return;
  const url=new URL(window.location.href);
  if(id)url.searchParams.set("puzzle",id);
@@ -365,6 +382,8 @@ async function start(timeout=10000,initialLoad=false){
 }
 async function loadById(puzzleId,timeout=10000,initialLoad=false,fromInput=false){
  const id=++requestId;
+ // Capture the former status, URL and game before the loading message changes them.
+ const previous=fromInput?capturePuzzle():null;
  if(!fromInput)confirmLoad();
  pendingPuzzleId=puzzleId;
  $("new").disabled=true;$("retry").disabled=true;
@@ -372,7 +391,6 @@ async function loadById(puzzleId,timeout=10000,initialLoad=false,fromInput=false
  try{
   const puzzle=await withTimeout((async()=> (await getApi()).getPuzzleById(puzzleId))(),timeout);
   if(id!==requestId)return;
-  const previous=fromInput?capturePuzzle():null;
   applyCurated(puzzle,puzzle.size);
   if(fromInput){$("puzzle").value="";armLoadUndo(previous);}
   pendingPuzzleId=null;
