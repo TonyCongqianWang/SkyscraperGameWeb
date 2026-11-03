@@ -87,7 +87,7 @@ test("startup hides local generation while waiting for a curated puzzle", () => 
 
 test("startup timeouts fall back locally and preserve shared-key retry", () => {
   assert.match(script, /async function start\(timeout=10000,initialLoad=false\)/);
-  assert.match(script, /async function loadById\(puzzleId,timeout=10000,initialLoad=false\)/);
+  assert.match(script, /async function loadById\(puzzleId,timeout=10000,initialLoad=false(?:,fromInput=false)?\)/);
   assert.match(script, /if\(initialLoad\)\{\s*startLocal\(\)/);
   assert.match(script, /if\(initialLoad\)\{\s*startLocal\(true\)/);
   assert.match(script, /if\(pendingPuzzleId\)return loadById\(pendingPuzzleId,10000\)/);

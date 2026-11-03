@@ -1,0 +1,39 @@
+name: Screenshot previews
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-24.04 # Pinned: preinstalled Google Chrome, no browser download
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+          package-manager-cache: false
+      - name: Use preinstalled Chrome with Playwright Core
+        run: |
+          command -v google-chrome
+          google-chrome --version
+          npm install --no-save --ignore-scripts --no-audit --no-fund playwright-core@1.57.0
+      - name: Capture responsive screenshots
+        run: node tests/screenshots.cjs
+      - name: Upload screenshot previews
+        uses: actions/upload-artifact@v7
+        with:
+          name: skyscrapers-screenshots
+          path: artifacts/screenshots/
+          retention-days: 14
+          if-no-files-found: error
+      - name: Validate captured layouts
+        if: always()
+        run: |
+          node -e 'const fs=require("node:fs");const p="artifacts/screenshots/layout-results.json";if(!fs.existsSync(p))process.exit(1);const data=JSON.parse(fs.readFileSync(p,"utf8"));if(data.failures.length){console.error(data.failures.join("\\n"));process.exit(1)}console.log("All viewport checks passed.")'
