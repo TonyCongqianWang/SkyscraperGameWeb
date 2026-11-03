@@ -11,13 +11,14 @@ permissions:
 
 jobs:
   screenshots:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright 1.57 Chromium does not support Ubuntu 26.04 yet
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '26'
+          package-manager-cache: false
       - name: Install browser
         run: |
           npm install --no-save playwright@1.57.0
@@ -25,8 +26,7 @@ jobs:
       - name: Capture responsive screenshots
         run: node tests/screenshots.cjs
       - name: Upload screenshot previews
-        if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: skyscrapers-screenshots
           path: artifacts/screenshots/
