@@ -40,7 +40,7 @@ test("versioned puzzle ID appears and updates the shareable URL", () => {
 
 test("shared puzzles load by URL and retain the retry path", () => {
   assert.match(script, /new URL\(window\.location\.href\)\.searchParams\.get\("puzzle"\)/);
-  assert.match(script, /if\(sharedId\)loadById\(sharedId\)/);
+  assert.match(script, /loadById\(sharedId,2000,true\)/);
   assert.match(script, /\(await getApi\(\)\)\.getPuzzleById\(puzzleId\)/);
   assert.match(script, /if\(pendingPuzzleId\)return loadById\(pendingPuzzleId,10000\)/);
   assert.match(script, /if\(\/\^v1:\/\.test\(raw\)\)/);
@@ -48,3 +48,50 @@ test("shared puzzles load by URL and retain the retry path", () => {
   assert.match(script, /pendingPuzzleId=null;setPuzzleIdentity\(null\)/);
 });
 
+
+test("startup waits for a curated puzzle before falling back", () => {
+  const source = script.match(/function beginStartup\(\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(source, "startup function");
+  const runs = [];
+  const controls = {
+    retry: { hidden: false },
+    "source-note": { textContent: "" }
+  };
+  const sandbox = vm.createContext({
+    window: { location: { href: "https://example.org/game/" } },
+    URL,
+    $: name => controls[name],
+    showLocalControls: state => runs.push(["controls", state]),
+    checkAvailability: timeout => runs.push(["metadata", timeout]),
+    start: (timeout,initial) => runs.push(["random", timeout, initial]),
+    loadById: (id,timeout,initial) => runs.push(["shared", id, timeout, initial]),
+    startLocal: () => { throw Error("Must not generate locally on page load"); }
+  });
+  vm.runInContext(source + "\nglobalThis.startup=beginStartup;", sandbox);
+  sandbox.startup();
+  assert.deepEqual(runs.map(x => Array.from(x)), [
+    ["controls", true], ["random", 1000, true]
+  ]);
+  assert.equal(controls.retry.hidden, true);
+  assert.match(controls["source-note"].textContent, /Loading curated/);
+
+  runs.length = 0;
+  sandbox.window.location.href =
+    "https://example.org/game/?puzzle=v1%3A7%3Aextreme_plus%3Apuzzle_42";
+  sandbox.startup();
+  assert.deepEqual(runs.map(x => Array.from(x)), [
+    ["controls", true], ["metadata", 1000],
+    ["shared", "v1:7:extreme_plus:puzzle_42", 2000, true]
+  ]);
+});
+
+test("startup timeouts fall back locally and preserve shared-key retry", () => {
+  assert.match(script, /async function start\(timeout=10000,initialLoad=false\)/);
+  assert.match(script, /async function loadById\(puzzleId,timeout=10000,initialLoad=false\)/);
+  assert.match(script, /if\(initialLoad\)\{\s*startLocal\(\)/);
+  assert.match(script, /if\(initialLoad\)\{\s*startLocal\(true\)/);
+  assert.match(script, /if\(pendingPuzzleId\)return loadById\(pendingPuzzleId,10000\)/);
+  assert.match(script, /function retryCurated\(\)\{[\s\S]*?return start\(10000\);/);
+  assert.match(script, /if\(id!==requestId\)return;/);
+  assert.doesNotMatch(script, /startLocal\(Boolean\(sharedId\)\)/);
+});

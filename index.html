@@ -103,8 +103,7 @@ function setPuzzleIdentity(id,{preserveUrl=false}={}){
 }
 function retryCurated(){
  if(pendingPuzzleId)return loadById(pendingPuzzleId,10000);
- if(metadata)return start(10000);
- return checkAvailability(10000);
+ return start(10000);
 }
 function showLocalControls(show){$("local-controls").hidden=!show;$("new").hidden=!metadata&&show;$("retry").hidden=!!metadata&&!pendingPuzzleId;}
 function resetBoard(){grid=initial.map(row=>row.slice());history=[];moves=[];lastMove=-1;selected=-1;checked=new Set();invalidCandidates=new Map();isInfeasible=evaluateState();diagnostics=isInfeasible?diagnostics:{empty:[],clues:[],missing:[]};closePicker();render();}
@@ -148,7 +147,7 @@ async function checkAvailability(timeout=1000){
 
  }
 }
-async function start(timeout=10000){
+async function start(timeout=10000,initialLoad=false){
  pendingPuzzleId=null;
  const id=++requestId,size=Number($("size").value);
  $("new").disabled=true;$("retry").disabled=true;
@@ -156,6 +155,8 @@ async function start(timeout=10000){
  try{
   const puzzle=await withTimeout((async()=>{
    const info=metadata||await refreshMetadata();
+   if(id!==requestId)return;
+   metadata=info;
    const difficulty=selectedDifficulty();
    if(!(info.sizes?.[String(size)]?.[difficulty]>0))throw Error("No curated puzzles for this selection");
    return (await getApi()).getRandomPuzzle({size,difficulty});
@@ -165,11 +166,17 @@ async function start(timeout=10000){
   setStatus("Curated puzzle loaded. Select an empty square.");
  }catch(error){
   if(id!==requestId)return;
+  if(initialLoad){
+   startLocal();
+   $("source-note").textContent="Local puzzle · Difficulty/uniqueness not guaranteed. Curated puzzle unavailable; retry later.";
+   setStatus("Local puzzle ready. Select an empty square.");
+  }else{
+   setStatus("Curated puzzle unavailable. Your current puzzle is unchanged; retry later.");
+  }
   showLocalControls(true);
-  setStatus("Curated puzzle could not be loaded. Your current puzzle is unchanged; retry when ready.");
  }finally{if(id===requestId){updateAvailability();$("retry").disabled=false;}}
 }
-async function loadById(puzzleId,timeout=10000){
+async function loadById(puzzleId,timeout=10000,initialLoad=false){
  const id=++requestId;
  pendingPuzzleId=puzzleId;
  $("new").disabled=true;$("retry").disabled=true;
@@ -183,18 +190,29 @@ async function loadById(puzzleId,timeout=10000){
   setStatus("Shared puzzle loaded. Select an empty square.");
  }catch(error){
   if(id!==requestId)return;
+  if(initialLoad){
+   startLocal(true);
+   $("source-note").textContent="Local puzzle · Difficulty/uniqueness not guaranteed. Shared puzzle unavailable; retry later.";
+   setStatus("Local puzzle ready. Select an empty square.");
+  }else{
+   setStatus("Shared puzzle unavailable: "+error.message+". Retry later.");
+  }
   showLocalControls(true);
-  setStatus("Unable to load shared puzzle: "+error.message+". Retry when ready.");
  }finally{
   if(id===requestId){updateAvailability();$("retry").disabled=false;}
  }
 }
 function beginStartup(){
  const sharedId=new URL(window.location.href).searchParams.get("puzzle");
- startLocal(Boolean(sharedId));showLocalControls(true);
- setStatus("Local puzzle ready. Select an empty square.");
- checkAvailability(1000);
- if(sharedId)loadById(sharedId);
+ showLocalControls(true);
+ $("retry").hidden=true;
+ $("source-note").textContent="Loading curated puzzle…";
+ if(sharedId){
+  checkAvailability(1000);
+  loadById(sharedId,2000,true);
+ }else{
+  start(1000,true);
+ }
 }
 
 function isValid(row,col,value){
