@@ -27,10 +27,13 @@ jobs:
       - name: Capture responsive screenshots
         run: node tests/screenshots.cjs
       - name: Upload screenshot previews
-        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: skyscrapers-screenshots
           path: artifacts/screenshots/
           retention-days: 14
-          if-no-files-found: warn
+          if-no-files-found: error
+      - name: Validate captured layouts
+        if: always()
+        run: |
+          node -e 'const fs=require("node:fs");const p="artifacts/screenshots/layout-results.json";if(!fs.existsSync(p))process.exit(1);const data=JSON.parse(fs.readFileSync(p,"utf8"));if(data.failures.length){console.error(data.failures.join("\\n"));process.exit(1)}console.log("All viewport checks passed.")'
