@@ -135,21 +135,47 @@ footer{display:block;text-align:center;margin:auto 0 0;padding-top:9px}
  .board-stage{width:min(100%,calc(100dvh - 290px),620px)}
  .pad button{height:36px}
 }
+
+/* Equal desktop panel heights and centered in-grid overlays. */
+.layout{align-items:stretch}
+.game-panel{display:flex;flex-direction:column}
+.game-panel .help-wrap{align-self:flex-end;margin-top:auto;padding-top:2px;line-height:1}
+#help-toggle{font-size:11px;font-weight:500;padding:2px 0;line-height:1.1}
+#status{margin:0;min-height:18px}
+#puzzle-id{margin:2px 0 0}
+.board-stage .statistics,.board-stage .help-popup{
+ position:absolute;top:50%;left:50%;right:auto;bottom:auto;transform:translate(-50%,-50%);
+ width:min(280px,calc(100% - 24px));max-height:calc(100% - 16px);overflow:auto;
+ border:1px solid #c9ac7d;border-radius:12px;background:#fff9ed;box-shadow:0 8px 28px #61452335;
+ z-index:30;
+}
+.board-stage .statistics{width:min(240px,calc(100% - 24px))}
+.board-stage .help-popup{padding:12px;font-size:13px;line-height:1.4}
+.actions{
+ display:grid;grid-template-columns:repeat(5,max-content);justify-content:center;
+ align-items:center;gap:6px;margin:6px auto;max-width:100%;
+}
+.actions button:disabled{opacity:.4;cursor:not-allowed}
+@media(max-width:900px){.layout{align-items:start}}
+@media(max-width:680px){
+ .actions{grid-template-columns:repeat(2,max-content)}
+ .actions button:last-child{grid-column:1/-1;justify-self:center}
+}
 </style>
 </head>
 <body><div class="wrap">
 <div class="layout"><main class="panel game-panel">
 <div class="panel-head"><h2 id="heading">Skyscrapers</h2><p id="source-note" class="sub" role="status">Loading curated puzzle…</p></div><div class="board-stage"><div id="board" class="board" aria-label="Skyscrapers puzzle"></div>
+
+<section id="statistics" class="statistics" aria-label="Puzzle statistics" hidden><div class="statistics-head"><h3>Statistics</h3><button id="stats-close" type="button" aria-label="Hide statistics">×</button></div><dl><dt>Time</dt><dd id="stat-time">00:00:00</dd><dt>Inserts</dt><dd id="stat-inserts">0</dd><dt>Undos</dt><dd id="stat-undos">0</dd><dt>Dead ends</dt><dd id="stat-dead-ends">0</dd><dt>Solution peeked</dt><dd id="stat-solution">No</dd><dt>Domain assist</dt><dd id="stat-domains">No</dd></dl></section><section id="help-popup" class="help-popup" hidden><div class="help-top"><strong>How to play</strong><button id="help-close" type="button" aria-label="Close instructions">×</button></div><p>Place heights 1–N once in each row and column. Edge numbers show how many buildings you can see looking inward; taller ones hide those behind them.</p><p>Select a square and enter a number, or double-click it for a picker. Click a clue to check its view. <a href="https://github.com/TonyCongqianWang/SkyscraperGame#game-objective">Illustrated rules ↗</a></p></section></div>
 <div class="pad" id="pad"></div><div class="actions"><button id="undo">↶ Undo</button><button id="show-solution">Show solution</button><button id="check">Check clues</button><button id="domains" aria-pressed="false">Show domains</button><button id="stats-toggle" aria-controls="statistics" aria-expanded="false">Statistics</button></div>
-<section id="statistics" class="statistics" aria-label="Puzzle statistics" hidden><div class="statistics-head"><h3>Statistics</h3><button id="stats-close" type="button" aria-label="Hide statistics">×</button></div><dl><dt>Time</dt><dd id="stat-time">00:00:00</dd><dt>Inserts</dt><dd id="stat-inserts">0</dd><dt>Undos</dt><dd id="stat-undos">0</dd><dt>Dead ends</dt><dd id="stat-dead-ends">0</dd><dt>Solution peeked</dt><dd id="stat-solution">No</dd><dt>Domain assist</dt><dd id="stat-domains">No</dd></dl></section></div>
 <p id="status" role="status" aria-live="polite"></p><p id="puzzle-id" class="sub" hidden></p>
-</main><aside class="panel controls"><h2>New puzzle</h2><label for="size">Grid size <output id="sizeOut">5 × 5</output></label><input id="size" type="range" min="4" max="9" step="1" value="5">
+<div class="help-wrap"><button id="help-toggle" type="button" aria-expanded="false" aria-controls="help-popup">How to play?</button></div></main><aside class="panel controls"><h2>New puzzle</h2><label for="size">Grid size <output id="sizeOut">5 × 5</output></label><input id="size" type="range" min="4" max="9" step="1" value="5">
 <label for="difficulty">Difficulty <output id="difficultyOut">Loading…</output></label><input id="difficulty" type="range" min="0" max="7" step="1" value="2" disabled><p id="difficultyCount" class="sub"></p>
 <p id="availability" class="sub" role="status">Loading curated puzzle availability…</p>
 <button id="new" class="primary">New curated puzzle</button><div id="local-controls" hidden><label for="clue">Visibility clues <output id="clueOut">85%</output></label><input id="clue" type="range" min="30" max="100" step="5" value="85"><label for="filled">Given cells <output id="filledOut">30%</output></label><input id="filled" type="range" min="0" max="75" step="5" value="30"><button id="local-new" class="primary">Generate local puzzle</button><button id="retry" type="button">Retry curated puzzle</button></div>
 
 <h3>Share a puzzle</h3><textarea id="puzzle" rows="3" placeholder="Puzzle ID or quoted clues and optional grid"></textarea><button id="load">Load puzzle</button><button id="copy">Copy puzzle</button>
-<div class="help-wrap"><button id="help-toggle" type="button" aria-expanded="false" aria-controls="help-popup">How to play?</button><section id="help-popup" class="help-popup" hidden><div class="help-top"><strong>How to play</strong><button id="help-close" type="button" aria-label="Close instructions">×</button></div><p>Place heights 1–N once in each row and column. Edge numbers show how many buildings you can see looking inward; taller ones hide those behind them.</p><p>Select a square and enter a number, or double-click it for a picker. Click a clue to check its view. <a href="https://github.com/TonyCongqianWang/SkyscraperGame#game-objective">Illustrated rules ↗</a></p></section></div>
 </aside></div><footer>Based on <a href="https://github.com/TonyCongqianWang/SkyscraperGame">SkyscraperGame</a> · Curated puzzles by <a href="https://github.com/TonyCongqianWang/SkyscraperSolver">SkyscraperSolver</a> · <a href="https://github.com/TonyCongqianWang/SkyscraperGameWeb">GitHub ↗</a></footer></div>
 <div id="picker" role="dialog" aria-label="Enter building height" hidden><h3 id="picker-title">Choose a height</h3><div class="picker-pad" id="picker-pad"></div><button class="picker-close" id="picker-close">Cancel (Esc)</button></div>
 <script>
@@ -169,7 +195,7 @@ function updateStatistics(){
  $("stat-solution").textContent=stats.solutionPeeked?"Yes":"No";
  $("stat-domains").textContent=stats.domainAssist?"Yes":"No";
 }
-function showStatistics(show){$("statistics").hidden=!show;$("stats-toggle").setAttribute("aria-expanded",String(show));updateStatistics()}
+function showStatistics(show){$("statistics").hidden=!show;$("stats-toggle").setAttribute("aria-expanded",String(show));if(show){closePicker();toggleHelp(false);}render();updateStatistics()}
 function resetStatistics(){stats=freshStatistics();showStatistics(false)}
 function freezeStatistics(){if(stats.frozen)return;stats.elapsedCs=elapsedCentiseconds();stats.frozen=true;showStatistics(true)}
 setInterval(updateStatistics,40);
@@ -227,7 +253,7 @@ function undoLoad(){
  closePicker();render();showStatistics(state.statsVisible);
  setStatus(state.feedback);
 }
-function toggleHelp(show){$("help-popup").hidden=!show;$("help-toggle").setAttribute("aria-expanded",String(show))}
+function toggleHelp(show){$("help-popup").hidden=!show;$("help-toggle").setAttribute("aria-expanded",String(show));if(show&&!$("statistics").hidden)showStatistics(false)}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function latin(size){const row=shuffle(Array.from({length:size},(_,i)=>i)),col=shuffle(Array.from({length:size},(_,i)=>i)),vals=shuffle(Array.from({length:size},(_,i)=>i+1));return row.map(r=>col.map(c=>vals[(r+c)%size]))}
 function visible(xs){let top=0,count=0;for(const x of xs){if(x>top){top=x;count++}}return count}
@@ -423,8 +449,9 @@ function isSolved(){
  }
  return clues.every((v,i)=>!v||visible(getLine(Math.floor(i/n),i%n))===v);
 }
-function setCell(value){confirmLoad();if(isInfeasible)return setStatus("This state is infeasible ("+diagnosticMessage()+"). Undo the last move to continue.");if(selected<0)return setStatus("Select an empty cell first.");const r=Math.floor(selected/n),c=selected%n;if(initial[r][c])return setStatus("Given cells cannot be changed.");if(grid[r][c])return setStatus("This cell is already filled. Only the most recent move can be removed using Undo.");if(value&&(!Number.isInteger(value)||value<1||value>n||!isValid(r,c,value)))return setStatus("That number is already used in this row or column.");if(grid[r][c]===value)return;history.push(snapshotState());moves.push({index:selected,value});lastMove=selected;grid[r][c]=value;checked.clear();isInfeasible=evaluateState();if(!stats.frozen){if(value)stats.inserts++;if(isInfeasible)stats.deadEnds++;}render();if(isInfeasible)return setStatus("Contradiction: "+diagnosticMessage()+". Undo the last move to continue; its assignment will be marked invalid.");if(grid.every(row=>row.every(x=>x>0))){const solved=isSolved();setStatus(solved?"✓ Solved! All rows, columns and clues match.":"Grid filled, but rows, columns or edge clues do not match.");if(solved)freezeStatistics();}else setStatus(value?"Number entered.":"Cell cleared.");}
+function setCell(value){if(!$("statistics").hidden)return;confirmLoad();if(isInfeasible)return setStatus("This state is infeasible ("+diagnosticMessage()+"). Undo the last move to continue.");if(selected<0)return setStatus("Select an empty cell first.");const r=Math.floor(selected/n),c=selected%n;if(initial[r][c])return setStatus("Given cells cannot be changed.");if(grid[r][c])return setStatus("This cell is already filled. Only the most recent move can be removed using Undo.");if(value&&(!Number.isInteger(value)||value<1||value>n||!isValid(r,c,value)))return setStatus("That number is already used in this row or column.");if(grid[r][c]===value)return;history.push(snapshotState());moves.push({index:selected,value});lastMove=selected;grid[r][c]=value;checked.clear();isInfeasible=evaluateState();if(!stats.frozen){if(value)stats.inserts++;if(isInfeasible)stats.deadEnds++;}render();if(isInfeasible)return setStatus("Contradiction: "+diagnosticMessage()+". Undo the last move to continue; its assignment will be marked invalid.");if(grid.every(row=>row.every(x=>x>0))){const solved=isSolved();setStatus(solved?"✓ Solved! All rows, columns and clues match.":"Grid filled, but rows, columns or edge clues do not match.");if(solved)freezeStatistics();}else setStatus(value?"Number entered.":"Cell cleared.");}
 function showSolution(){
+ if(!$("statistics").hidden)return;
  confirmLoad();
  if(moves[moves.length-1]?.type==="solution"){$("undo").click();return;}
  if(isSolved())return setStatus("Puzzle already solved.");
@@ -438,7 +465,7 @@ function showSolution(){
  invalidCandidates=new Map();isInfeasible=false;diagnostics={empty:[],clues:[],missing:[]};
  closePicker();render();setStatus("Solution shown. Undo restores your previous board.");
 }
-function checkOne(i){confirmLoad();if(isInfeasible)return setStatus("Puzzle is infeasible. Undo to continue.");if(!clues[i])return;const line=getLine(Math.floor(i/n),i%n);if(line.every(x=>x>0)){checked.add(i);setStatus(visible(line)===clues[i]?"✓ Clue satisfied.":"✗ Clue does not match. Review your moves.");}else setStatus("This row or column is not complete yet.");render()}
+function checkOne(i){if(!$("statistics").hidden)return;confirmLoad();if(isInfeasible)return setStatus("Puzzle is infeasible. Undo to continue.");if(!clues[i])return;const line=getLine(Math.floor(i/n),i%n);if(line.every(x=>x>0)){checked.add(i);setStatus(visible(line)===clues[i]?"✓ Clue satisfied.":"✗ Clue does not match. Review your moves.");}else setStatus("This row or column is not complete yet.");render()}
 function render(){const solved=isSolved();const b=$("board");b.style.setProperty("--n",n);b.style.setProperty("--count",n+2);b.replaceChildren();$("heading").textContent="Skyscrapers";
 function blank(){let e=document.createElement("span");e.className="blank";b.append(e)}
 function clue(i){let e=document.createElement("button");e.className="clue"+(diagnostics.clues.includes(i)?" violated":"")+(!clues[i]?" unused":"")+((solved||checked.has(i))?" "+(visible(getLine(Math.floor(i/n),i%n))===clues[i]?"ok":"pending"):"");e.textContent=clues[i]||"";e.disabled=!clues[i];e.setAttribute("aria-label","Check clue "+(i+1));e.onclick=()=>checkOne(i);b.append(e)}
@@ -446,6 +473,9 @@ blank();for(let c=0;c<n;c++)clue(c);blank();
 for(let r=0;r<n;r++){clue(2*n+r);for(let c=0;c<n;c++){let i=r*n+c,e=document.createElement("button");e.className="cell"+(!solved&&selected===i?" active":"")+(initial[r][c]?" given":"")+(lastMove===i?(solved?" solved-latest":" latest"):"")+(isInfeasible&&lastMove===i?" contradiction":"")+(diagnostics.empty.includes(i)?" empty-domain":"");if(showDomains&&!grid[r][c]){e.classList.add("domains");e.style.setProperty("--domain-cols",Math.ceil(Math.sqrt(n)));for(let v=1;v<=n;v++){const digit=document.createElement("span");digit.className="domain-digit"+(isValid(r,c,v)?"":" off");digit.textContent=v;e.append(digit)}}else e.textContent=grid[r][c]||"";e.setAttribute("aria-label","Row "+(r+1)+" column "+(c+1)+" value "+(grid[r][c]||"empty"));e.onclick=()=>{confirmLoad();selected=i;render();if(grid[r][c])setStatus(initial[r][c]?"Given cells cannot be changed.":"Already filled. Only Undo can remove your last move.");};e.ondblclick=()=>openPicker(i);b.append(e)}clue(3*n+r)}
 blank();for(let c=0;c<n;c++)clue(n+c);blank();
 $("show-solution").disabled=!solutionKnown;$("show-solution").textContent=moves[moves.length-1]?.type==="solution"?"Hide solution":"Show solution";const pad=$("pad");pad.replaceChildren();for(let v=1;v<=n;v++){let e=document.createElement("button");e.textContent=v;e.disabled=selected<0||!!grid[Math.floor(selected/n)]?.[selected%n]||!isValid(Math.floor(selected/n),selected%n,v);e.onclick=()=>setCell(v);pad.append(e)}
+const locked=!$("statistics").hidden;
+if(locked){b.querySelectorAll("button").forEach(button=>button.disabled=true);pad.querySelectorAll("button").forEach(button=>button.disabled=true);}
+for(const id of ["undo","show-solution","check","domains"])$(id).disabled=locked||(id==="show-solution"&&!solutionKnown);
 }
 function load(){try{const raw=$("puzzle").value.trim();if(/^v1:/.test(raw)){loadById(raw,10000,false,true);return;}const groups=[...raw.matchAll(/"([^"]*)"/g)].map(x=>x[1]);if(!groups.length)throw Error("Expected a quoted clue string.");const a=groups[0].trim().split(/\s+/).map(Number),size=a.length/4;if(!Number.isInteger(size)||size<4||size>9||a.some(v=>!Number.isInteger(v)||v<0||v>size))throw Error("Invalid clues or size.");const values=groups.length>1?groups[1].trim().split(/\s+/).map(Number):Array(size*size).fill(0);if(values.length!==size*size||values.some(v=>!Number.isInteger(v)||v<0||v>size))throw Error("Invalid grid.");// Validate the supplied grid before modifying the current game.
  const candidate=Array.from({length:size},(_,r)=>values.slice(r*size,(r+1)*size));
@@ -462,6 +492,7 @@ $("show-solution").onclick=showSolution;$("help-toggle").onclick=()=>toggleHelp(
  else setStatus(move?.type==="solution"?"Solution reveal undone.":invalid?"Invalid assignment undone and excluded from its cell's domain.":"Move undone.")};$("check").onclick=()=>{confirmLoad();if(isInfeasible)return setStatus("Puzzle is infeasible. Undo to continue.");let incorrect=0,unfinished=0;clues.forEach((v,i)=>{if(!v)return;const line=getLine(Math.floor(i/n),i%n);if(line.some(x=>!x)){unfinished++;return}checked.add(i);if(visible(line)!==v)incorrect++});render();setStatus(incorrect?incorrect+" completed clues do not match.":unfinished? "All completed clues match; "+unfinished+" lines are unfinished.":"✓ All clues match.")};
 function closePicker(){$("picker").hidden=true}
 function openPicker(i){
+ if(!$("statistics").hidden)return;
  confirmLoad();
  const r=Math.floor(i/n),c=i%n;selected=i;render();
  if(grid[r][c])return setStatus(initial[r][c]?"Given cells cannot be changed.":"Already filled. Only Undo can remove your last move.");
@@ -482,6 +513,6 @@ $("domains").onclick=()=>{confirmLoad();showDomains=!showDomains;if(showDomains&
 $("load").onclick=()=>loadBackup?undoLoad():load();$("puzzle").addEventListener("input",()=>{confirmLoad();++requestId;});$("copy").onclick=async()=>{let s=puzzleText();$("puzzle").value=s;try{await navigator.clipboard.writeText(s);setStatus("Puzzle copied.")}catch{setStatus("Puzzle shown in text box; copy it from there.")}};
 
 for(const [input,out] of [["clue","clueOut"],["filled","filledOut"]])$(input).oninput=()=>$(out).textContent=$(input).value+"%";
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){closePicker();toggleHelp(false);return}if(["TEXTAREA","INPUT","SELECT"].includes(document.activeElement?.tagName))return;if(e.key==="Backspace"){e.preventDefault();$("undo").click();return;}if(/^\d$/.test(e.key)&&Number(e.key)<=n&&Number(e.key)>0){if(!$("picker").hidden)closePicker();setCell(Number(e.key));}else if(e.key==="Delete"){$("undo").click()}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){$("undo").click();e.preventDefault()}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closePicker();toggleHelp(false);if(!$("statistics").hidden)showStatistics(false);return}if(!$("statistics").hidden)return;if(["TEXTAREA","INPUT","SELECT"].includes(document.activeElement?.tagName))return;if(e.key==="Backspace"){e.preventDefault();$("undo").click();return;}if(/^\d$/.test(e.key)&&Number(e.key)<=n&&Number(e.key)>0){if(!$("picker").hidden)closePicker();setCell(Number(e.key));}else if(e.key==="Delete"){$("undo").click()}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){$("undo").click();e.preventDefault()}});
 updateAvailability();beginStartup();
 </script></body></html>
