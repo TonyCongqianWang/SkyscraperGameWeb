@@ -49,7 +49,7 @@ test("shared puzzles load by URL and retain the retry path", () => {
 });
 
 
-test("startup waits for a curated puzzle before falling back", () => {
+test("startup hides local generation while waiting for a curated puzzle", () => {
   const source = script.match(/function beginStartup\(\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(source, "startup function");
   const runs = [];
@@ -70,7 +70,7 @@ test("startup waits for a curated puzzle before falling back", () => {
   vm.runInContext(source + "\nglobalThis.startup=beginStartup;", sandbox);
   sandbox.startup();
   assert.deepEqual(runs.map(x => Array.from(x)), [
-    ["controls", true], ["random", 1000, true]
+    ["controls", false], ["random", 1000, true]
   ]);
   assert.equal(controls.retry.hidden, true);
   assert.match(controls["source-note"].textContent, /Loading curated/);
@@ -80,7 +80,7 @@ test("startup waits for a curated puzzle before falling back", () => {
     "https://example.org/game/?puzzle=v1%3A7%3Aextreme_plus%3Apuzzle_42";
   sandbox.startup();
   assert.deepEqual(runs.map(x => Array.from(x)), [
-    ["controls", true], ["metadata", 1000],
+    ["controls", false], ["metadata", 1000],
     ["shared", "v1:7:extreme_plus:puzzle_42", 2000, true]
   ]);
 });
@@ -94,4 +94,9 @@ test("startup timeouts fall back locally and preserve shared-key retry", () => {
   assert.match(script, /function retryCurated\(\)\{[\s\S]*?return start\(10000\);/);
   assert.match(script, /if\(id!==requestId\)return;/);
   assert.doesNotMatch(script, /startLocal\(Boolean\(sharedId\)\)/);
+});
+
+test("solution reveal is a synchronous toggle backed by Undo", () => {
+  assert.match(script, /if\(moves\[moves\.length-1\]\?\.type==="solution"\)\{\$\("undo"\)\.click\(\);return;\}/);
+  assert.match(script, /\$\("show-solution"\)\.textContent=moves\[moves\.length-1\]\?\.type==="solution"\?"Hide solution":"Show solution"/);
 });
