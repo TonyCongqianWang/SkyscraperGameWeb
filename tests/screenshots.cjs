@@ -3,7 +3,6 @@
 const { chromium } = require('playwright-core');
 const fs = require('node:fs');
 const path = require('node:path');
-const assert = require('node:assert/strict');
 
 const puzzle = '"0 3 3 2 1 2 2 0 0 3 0 0 3 0 2 0 2 2 0 0" "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 0 0 0 0"';
 const sizes = [
@@ -20,8 +19,10 @@ fs.mkdirSync(output, { recursive: true });
 
 (async () => {
   const browser = await chromium.launch({headless: true, executablePath: process.env.CHROME_BIN || '/usr/bin/google-chrome', args: ['--no-sandbox']});
+  const failures = [];
   try {
     for (const [name, width, height, stacked] of sizes) {
+      try {
       const page = await browser.newPage({viewport: {width, height}, deviceScaleFactor: 1});
       // Stub the remote API; use the provided reference puzzle instead.
       await page.route('https://tonycongqianwang.github.io/**', route => route.abort());
@@ -31,23 +32,39 @@ fs.mkdirSync(output, { recursive: true });
       await page.locator('#puzzle').fill(puzzle);
       await page.locator('#load').click();
       await page.waitForFunction(() => document.querySelectorAll('.cell').length === 25);
-      // Desktop should not scroll vertically; narrow/staked layouts can.
+      // Capture before checking; preserve screenshots even when a viewport fails.
       const metrics = await page.evaluate(() => ({
-        horizontal: document.documentElement.scrollWidth > innerWidth + 1,
-        vertical: document.documentElement.scrollHeight > innerHeight + 1,
+        viewportWidth: innerWidth, viewportHeight: innerHeight,
+        documentWidth: document.documentElement.scrollWidth,
+        documentHeight: document.documentElement.scrollHeight,
         columns: getComputedStyle(document.querySelector('.layout')).gridTemplateColumns.split(' ').length,
+        gameHeight: Math.ceil(document.querySelector('.game-panel').getBoundingClientRect().height),
+        controlsHeight: Math.ceil(document.querySelector('.controls').getBoundingClientRect().height),
       }));
-      assert.equal(metrics.horizontal, false, name + ': unexpected horizontal scroll');
-      if (!stacked) assert.equal(metrics.vertical, false, name + ': unnecessary desktop vertical scroll');
-      assert.equal(metrics.columns, stacked ? 1 : 2, name + ': incorrect column count');
       await page.screenshot({path: path.join(output, name + '.png'), fullPage: true});
       // Also capture the new statistics overlay.
       await page.locator('#stats-toggle').click();
       await page.screenshot({path: path.join(output, name + '-stats.png'), fullPage: true});
-      await page.close();
-      process.stdout.write(name + ': OK\n');
+      if (metrics.documentWidth > metrics.viewportWidth + 1)
+        failures.push(name + ': horizontal overflow by ' + (metrics.documentWidth - metrics.viewportWidth) + 'px');
+      if (!stacked && metrics.documentHeight > metrics.viewportHeight + 1)
+        failures.push(name + ': desktop vertical overflow by ' + (metrics.documentHeight - metrics.viewportHeight) +
+          'px (game ' + metrics.gameHeight + 'px, controls ' + metrics.controlsHeight + 'px)');
+      if (metrics.columns !== (stacked ? 1 : 2))
+        failures.push(name + ': expected ' + (stacked ? 1 : 2) + ' columns, got ' + metrics.columns);
+      process.stdout.write(name + ': captured (' + JSON.stringify(metrics) + ')\n');
+      } catch (err) {
+        failures.push(name + ': capture failed: ' + err.message);
+      } finally {
+        await page.close();
+      }
     }
   } finally {
     await browser.close();
+  }
+  fs.writeFileSync(path.join(output, 'layout-results.json'), JSON.stringify({failures}, null, 2));
+  if (failures.length) {
+    console.error('Layout failures (' + failures.length + '):\n' + failures.join('\n'));
+    process.exitCode = 1;
   }
 })().catch(err => { console.error(err); process.exitCode = 1; });
