@@ -8,7 +8,7 @@ A browser-playable Skyscrapers game hosted on GitHub Pages.
 
 The game imports the static browser API from
 [SkyscraperSolver](https://github.com/TonyCongqianWang/SkyscraperSolver)
-at `/assets/puzzles/random.js`. Sizes 4–9 and all eight difficulty levels
+at `/assets/puzzles/puzzles.js`. Sizes 4–9 and all eight difficulty levels
 (`very_easy`, `easy`, `medium`, `hard`, `very_hard`, `extreme`,
 `extreme_plus`, `extreme_plus_plus`) use availability metadata and
 size/difficulty-sharded JSON. Missing combinations remain unavailable.

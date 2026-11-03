@@ -89,7 +89,7 @@ function snapshotState(){return {grid:grid.map(row=>row.slice()),invalidCandidat
 function restoreState(state){grid=state.grid;invalidCandidates=state.invalidCandidates}
 function puzzleText(){return '"'+clues.join(" ")+'" "'+flatten(initial)+'"'}
 function setStatus(t){feedback=t;$("status").textContent=t;$("status").classList.toggle("error",isInfeasible||/contradiction|infeasible|invalid puzzle/i.test(t))}
-const API_URL="https://tonycongqianwang.github.io/SkyscraperSolver/assets/puzzles/random.js";
+const API_URL="https://tonycongqianwang.github.io/SkyscraperSolver/assets/puzzles/puzzles.js";
 const LEVELS=[["very_easy","Very easy"],["easy","Easy"],["medium","Medium"],["hard","Hard"],["very_hard","Very hard"],["extreme","Extreme"],["extreme_plus","Extreme+"],["extreme_plus_plus","Extreme++"]];
 let curatedApi=null,metadata=null,requestId=0,solutionKnown=false,pendingPuzzleId=null;
 function setPuzzleIdentity(id,{preserveUrl=false}={}){

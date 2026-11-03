@@ -7,7 +7,7 @@ const script = html.match(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/i)?.[1];
 assert.ok(script, "inline game script");
 
 test("new published API and eight difficulty levels", () => {
-  assert.match(script, /\/SkyscraperSolver\/assets\/puzzles\/random\.js/);
+  assert.match(script, /\/SkyscraperSolver\/assets\/puzzles\/puzzles\.js/);
   assert.doesNotMatch(script, /puzzle-bank\/curated\/v1\/api\.js/);
   assert.match(html, /id="difficulty" type="range" min="0" max="7"/);
   const levels = [...script.matchAll(/\["(very_easy|easy|medium|hard|very_hard|extreme|extreme_plus|extreme_plus_plus)","([^"]+)"\]/g)].map(match => match[1]);
