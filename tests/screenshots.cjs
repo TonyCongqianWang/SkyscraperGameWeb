@@ -41,6 +41,9 @@ fs.mkdirSync(output, { recursive: true });
         columns: getComputedStyle(document.querySelector('.layout')).gridTemplateColumns.split(' ').length,
         gameHeight: Math.ceil(document.querySelector('.game-panel').getBoundingClientRect().height),
         controlsHeight: Math.ceil(document.querySelector('.controls').getBoundingClientRect().height),
+        titleToGridGap: Math.round(document.querySelector('#board').getBoundingClientRect().top -
+          document.querySelector('.panel-head').getBoundingClientRect().bottom),
+        gameTopPadding: Math.round(parseFloat(getComputedStyle(document.querySelector('.game-panel')).paddingTop)),
       }));
       await page.screenshot({path: path.join(output, name + '.png'), fullPage: true});
       // Centered overlay, disabled puzzle controls, and a working toggle.
@@ -72,6 +75,9 @@ fs.mkdirSync(output, { recursive: true });
       await page.locator('#stats-toggle').click();
       const unlocked = await page.locator('#undo').isEnabled();
       if (!unlocked) failures.push(name + ': gameplay controls remain locked after hiding statistics');
+      if (stacked && (metrics.titleToGridGap < 32 || metrics.gameTopPadding < 28))
+        failures.push(name + ': stacked game lacks intentional spacing (gap ' +
+          metrics.titleToGridGap + 'px; top padding ' + metrics.gameTopPadding + 'px)');
       if (metrics.documentWidth > metrics.viewportWidth + 1)
         failures.push(name + ': horizontal overflow by ' + (metrics.documentWidth - metrics.viewportWidth) + 'px');
       if (!stacked && metrics.documentHeight > metrics.viewportHeight + 1)
