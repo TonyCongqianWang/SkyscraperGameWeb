@@ -43,9 +43,35 @@ fs.mkdirSync(output, { recursive: true });
         controlsHeight: Math.ceil(document.querySelector('.controls').getBoundingClientRect().height),
       }));
       await page.screenshot({path: path.join(output, name + '.png'), fullPage: true});
-      // Also capture the new statistics overlay.
+      // Centered overlay, disabled puzzle controls, and a working toggle.
       await page.locator('#stats-toggle').click();
+      const overlay = await page.evaluate(() => {
+        const board = document.querySelector('#board').getBoundingClientRect();
+        const stats = document.querySelector('#statistics').getBoundingClientRect();
+        const game = document.querySelector('.game-panel').getBoundingClientRect();
+        const sidebar = document.querySelector('.controls').getBoundingClientRect();
+        const center = r => ({x:(r.left+r.right)/2,y:(r.top+r.bottom)/2});
+        const buttons = [...document.querySelectorAll('.actions button')];
+        return {
+          centerErrorX:Math.abs(center(board).x-center(stats).x),
+          centerErrorY:Math.abs(center(board).y-center(stats).y),
+          locked:buttons.slice(0,4).every(b=>b.disabled) && [...document.querySelectorAll('#pad button,#board button')].every(b=>b.disabled),
+          panelBottomDelta:Math.abs(game.bottom-sidebar.bottom),
+          buttonRows:[...new Set(buttons.map(b=>Math.round(b.getBoundingClientRect().top)))].map(y=>buttons.filter(b=>Math.abs(b.getBoundingClientRect().top-y)<2).length),
+        };
+      });
       await page.screenshot({path: path.join(output, name + '-stats.png'), fullPage: true});
+      if (overlay.centerErrorX > 2 || overlay.centerErrorY > 2)
+        failures.push(name + ': statistics overlay not centered on board (' +
+          overlay.centerErrorX.toFixed(1) + ', ' + overlay.centerErrorY.toFixed(1) + 'px)');
+      if (!overlay.locked) failures.push(name + ': gameplay remains interactive while statistics is open');
+      if (!stacked && overlay.panelBottomDelta > 2)
+        failures.push(name + ': outer panel bottoms differ by ' + overlay.panelBottomDelta.toFixed(1) + 'px');
+      if (overlay.buttonRows.length===2 && overlay.buttonRows[1]===1 && overlay.buttonRows[0]===4)
+        failures.push(name + ': ugly 4-1 gameplay button wrapping');
+      await page.locator('#stats-toggle').click();
+      const unlocked = await page.locator('#undo').isEnabled();
+      if (!unlocked) failures.push(name + ': gameplay controls remain locked after hiding statistics');
       if (metrics.documentWidth > metrics.viewportWidth + 1)
         failures.push(name + ': horizontal overflow by ' + (metrics.documentWidth - metrics.viewportWidth) + 'px');
       if (!stacked && metrics.documentHeight > metrics.viewportHeight + 1)
