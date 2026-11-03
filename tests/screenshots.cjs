@@ -75,7 +75,8 @@ fs.mkdirSync(output, { recursive: true });
       await page.locator('#stats-toggle').click();
       const unlocked = await page.locator('#undo').isEnabled();
       if (!unlocked) failures.push(name + ': gameplay controls remain locked after hiding statistics');
-      if (stacked && (metrics.titleToGridGap < 32 || metrics.gameTopPadding < 28))
+      // Reduced single-column spacing intentionally allows 22px top padding on narrow phones.
+      if (stacked && (metrics.titleToGridGap < 32 || metrics.gameTopPadding < 22))
         failures.push(name + ': stacked game lacks intentional spacing (gap ' +
           metrics.titleToGridGap + 'px; top padding ' + metrics.gameTopPadding + 'px)');
       if (metrics.documentWidth > metrics.viewportWidth + 1)
