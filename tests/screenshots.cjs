@@ -1,6 +1,6 @@
-// Run with: node tests/screenshots.cjs (requires playwright and Chromium).
+// Run with: node tests/screenshots.cjs (requires playwright-core and system Chrome).
 // Deterministic reference fixture: no network and no curated puzzle API dependency.
-const { chromium } = require('playwright');
+const { chromium } = require('playwright-core');
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
@@ -19,7 +19,7 @@ const output = path.resolve(__dirname, '../artifacts/screenshots');
 fs.mkdirSync(output, { recursive: true });
 
 (async () => {
-  const browser = await chromium.launch({headless: true});
+  const browser = await chromium.launch({headless: true, executablePath: process.env.CHROME_BIN || '/usr/bin/google-chrome', args: ['--no-sandbox']});
   try {
     for (const [name, width, height, stacked] of sizes) {
       const page = await browser.newPage({viewport: {width, height}, deviceScaleFactor: 1});
