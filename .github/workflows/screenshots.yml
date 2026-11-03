@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   screenshots:
-    runs-on: ubuntu-24.04 # Playwright 1.57 Chromium does not support Ubuntu 26.04 yet
+    runs-on: ubuntu-24.04 # Pinned: preinstalled Google Chrome, no browser download
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
@@ -19,10 +19,11 @@ jobs:
         with:
           node-version: '26'
           package-manager-cache: false
-      - name: Install browser
+      - name: Use preinstalled Chrome with Playwright Core
         run: |
-          npm install --no-save playwright@1.57.0
-          npx playwright install --with-deps chromium
+          command -v google-chrome
+          google-chrome --version
+          npm install --no-save --ignore-scripts --no-audit --no-fund playwright-core@1.57.0
       - name: Capture responsive screenshots
         run: node tests/screenshots.cjs
       - name: Upload screenshot previews
