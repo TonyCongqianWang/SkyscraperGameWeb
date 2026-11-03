@@ -6,19 +6,41 @@ A browser-playable Skyscrapers game hosted on GitHub Pages.
 
 ## Curated puzzles
 
-The game imports the browser-side curated API from [SkyscraperSolver](https://github.com/TonyCongqianWang/SkyscraperSolver) and reads availability metadata for grid sizes 4–9 and seven difficulty bands. Difficulty options with zero available puzzles are disabled; counts appear in the selector. The game fetches a random curated puzzle for the selected combination.
+The game imports the static browser API from
+[SkyscraperSolver](https://github.com/TonyCongqianWang/SkyscraperSolver)
+at `/assets/puzzles/random.js`. Sizes 4–9 and all eight difficulty levels
+(`very_easy`, `easy`, `medium`, `hard`, `very_hard`, `extreme`,
+`extreme_plus`, `extreme_plus_plus`) use availability metadata and
+size/difficulty-sharded JSON. Missing combinations remain unavailable.
 
-If metadata or puzzle fetching fails, the existing Latin-square generator supplies a playable local puzzle. The game displays a warning that local puzzles are not guaranteed unique or difficulty-calibrated and provides a **Retry curated puzzle** button. A successful retry replaces the fallback board. The current board remains playable while the request is pending.
+Each curated puzzle shows a small versioned ID beneath the title and puts
+the same ID in the `?puzzle=` query parameter. Copy the address bar URL to
+share the puzzle; opening it loads the exact record through
+`getPuzzleById()`. The Load puzzle field also accepts a versioned ID
+directly. The format is `v1:<size>:<difficulty>:<original-id>`.
+Normal local/imported puzzles have no curated ID and clear that parameter.
 
-**Deployment dependency:** The SkyscraperSolver API from [PR #18](https://github.com/TonyCongqianWang/SkyscraperSolver/pull/18) must be merged and published before curated requests can succeed. Until then the fallback generator is used.
+If curated loading fails, the current board remains playable; the local
+generator works offline and the Retry curated puzzle button is available.
+A shared URL remains intact when its initial load fails, so it can be retried.
+
+**Deployment dependency:** Merge and publish
+[SkyscraperSolver PR #20](https://github.com/TonyCongqianWang/SkyscraperSolver/pull/20)
+before deploying this frontend. The new API is not yet available on the
+production solver site until that PR is merged and Pages redeploys.
 
 ## Gameplay
 
 - Sizes 4×4 through 9×9, number entry, undo, clue checks, and domain display.
 - Load and copy puzzle strings in the desktop game's quoted clue/grid format.
+- Open curated puzzles by their versioned IDs and share them by URL.
 - Responsive layout for desktop and mobile.
-- Locally generated puzzles always have at least one solution, but uniqueness and difficulty are not guaranteed.
+- Locally generated puzzles always have at least one solution, but uniqueness
+  and difficulty are not guaranteed.
 
 ## Deployment
 
-Use **Settings → Pages → Build and deployment → GitHub Actions**. The workflow `.github/workflows/deploy.yml` deploys on pushes to `main`. For local development, serve the directory with a static HTTP server; the curated API requires network access.
+Use **Settings → Pages → Build and deployment → GitHub Actions**.
+The workflow `.github/workflows/deploy.yml` deploys on pushes to `main`.
+For local development, serve the directory with a static HTTP server;
+the curated API requires network access.
