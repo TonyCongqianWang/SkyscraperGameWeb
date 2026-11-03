@@ -27,9 +27,10 @@ jobs:
       - name: Capture responsive screenshots
         run: node tests/screenshots.cjs
       - name: Upload screenshot previews
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: skyscrapers-screenshots
           path: artifacts/screenshots/
           retention-days: 14
-          if-no-files-found: error
+          if-no-files-found: warn
