@@ -26,6 +26,8 @@ fs.mkdirSync(output, { recursive: true });
       // Stub the remote API; use the provided reference puzzle instead.
       await page.route('https://tonycongqianwang.github.io/**', route => route.abort());
       await page.goto('file://' + path.resolve(__dirname, '../index.html'));
+      // Let the automatic startup fallback finish before importing the fixture.
+      await page.waitForFunction(() => document.querySelectorAll('.cell').length > 0, {timeout: 5000});
       await page.locator('#puzzle').fill(puzzle);
       await page.locator('#load').click();
       await page.waitForFunction(() => document.querySelectorAll('.cell').length === 25);
