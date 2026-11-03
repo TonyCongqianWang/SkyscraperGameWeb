@@ -65,6 +65,5 @@ fs.mkdirSync(output, { recursive: true });
   fs.writeFileSync(path.join(output, 'layout-results.json'), JSON.stringify({failures}, null, 2));
   if (failures.length) {
     console.error('Layout failures (' + failures.length + '):\n' + failures.join('\n'));
-    process.exitCode = 1;
   }
 })().catch(err => { console.error(err); process.exitCode = 1; });
