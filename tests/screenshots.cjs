@@ -22,8 +22,9 @@ fs.mkdirSync(output, { recursive: true });
   const failures = [];
   try {
     for (const [name, width, height, stacked] of sizes) {
+      let page;
       try {
-      const page = await browser.newPage({viewport: {width, height}, deviceScaleFactor: 1});
+      page = await browser.newPage({viewport: {width, height}, deviceScaleFactor: 1});
       // Stub the remote API; use the provided reference puzzle instead.
       await page.route('https://tonycongqianwang.github.io/**', route => route.abort());
       await page.goto('file://' + path.resolve(__dirname, '../index.html'));
@@ -56,7 +57,7 @@ fs.mkdirSync(output, { recursive: true });
       } catch (err) {
         failures.push(name + ': capture failed: ' + err.message);
       } finally {
-        await page.close();
+        if (page) await page.close();
       }
     }
   } finally {
