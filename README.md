@@ -31,7 +31,10 @@ production solver site until that PR is merged and Pages redeploys.
 
 ## Gameplay
 
-- Sizes 4×4 through 9×9, number entry, undo, clue checks, and domain display.
+- Sizes 4×4 through 9×9, pen number entry, undo, clickable clue checks, and automatic or manual domains.
+- In **Manual domains**, switch between **Use pencil** (toggle any candidate, including currently impossible heights) and **Use pen** (enter a height). Manual notes remain unchanged across pen placements and ordinary Undo.
+- **Auto domains** shows calculated candidates and disables Pencil. Switching back reveals the separately stored manual notes.
+- Loading a new puzzle clears manual notes. The temporary **Undo load** action restores the previous grid, notes, and input/domain modes.
 - Load and copy puzzle strings in the desktop game's quoted clue/grid format.
 - Open curated puzzles by their versioned IDs and share them by URL.
 - Responsive layout for desktop and mobile.
