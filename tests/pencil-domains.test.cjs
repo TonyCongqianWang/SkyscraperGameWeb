@@ -112,3 +112,13 @@ test('tap T is permanent; hold T is temporary, without using key-repeat events',
   assert.match(script, /window\.addEventListener\("blur",\(\)=>finishPencilKey\(true\)\)/);
   assert.doesNotMatch(helper,/event\.repeat|e\.repeat/);
 });
+
+test('U invokes Undo once per press and does not repeat while held', () => {
+  assert.match(html, /id="undo">Undo \(<strong>u<\/strong>\)<\/button>/);
+  assert.doesNotMatch(html, /↶ Undo/);
+  assert.match(script, /e\.key\.toLowerCase\(\)==="u"&&!e\.ctrlKey&&!e\.metaKey&&!e\.altKey/);
+  assert.match(script, /if\(!undoKeyDown\)\{undoKeyDown=true;\$\("undo"\)\.click\(\);\}/);
+  assert.match(script, /if\(e\.key\.toLowerCase\(\)==="u"\)undoKeyDown=false/);
+  assert.match(script, /finishPencilKey\(true\);undoKeyDown=false/);
+  assert.match(script, /if\(\["TEXTAREA","INPUT","SELECT"\]\.includes\(document\.activeElement\?\.tagName\)\)return;/);
+});
