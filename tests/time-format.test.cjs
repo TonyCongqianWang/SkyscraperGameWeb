@@ -5,12 +5,12 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
-const script = html.match(/<script(?:\\s[^>]*)?>([\\s\\S]*?)<\\/script>/i)?.[1];
+const script = html.match(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/i)?.[1];
 assert.ok(script, 'inline game script');
-const source = script.match(/function formatTime\\(centiseconds\\)\\{[^\\n]*\\}/)?.[0];
+const source = script.match(/function formatTime\(centiseconds\)\{[^\n]*\}/)?.[0];
 assert.ok(source, 'time format helper');
 const sandbox = vm.createContext({});
-vm.runInContext(source + '\\nglobalThis.formatTime=formatTime;', sandbox);
+vm.runInContext(source + '\nglobalThis.formatTime=formatTime;', sandbox);
 
 test('stopwatch shows minutes:seconds.hundredths', () => {
   assert.equal(sandbox.formatTime(0), '00:00.00');
@@ -26,5 +26,5 @@ test('stopwatch switches to hours:minutes:seconds.hundredths after one hour', ()
 });
 
 test('initial statistics label uses the same decimal format', () => {
-  assert.match(html, /id="stat-time">00:00\\.00<\\/dd>/);
+  assert.match(html, /id="stat-time">00:00\.00<\/dd>/);
 });
