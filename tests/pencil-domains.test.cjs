@@ -109,16 +109,27 @@ test('tap T is permanent; hold T is temporary, without using key-repeat events',
   assert.match(helper, /performance\.now\(\)-pencilKeyDownAt>=250/);
   assert.match(helper, /pencilMode=pencilKeyOriginalMode/);
   assert.match(script, /document\.addEventListener\("keyup",e=>\{if\(e\.key\.toLowerCase\(\)==="t"\)finishPencilKey\(\);/);
-  assert.match(script, /window\.addEventListener\("blur",\(\)=>\{finishPencilKey\(true\);undoKeyDown=false;\}\)/);
+  assert.match(script, /window\.addEventListener\("blur",\(\)=>\{finishPencilKey\(true\);undoKeyDownAt=null;\}\)/);
   assert.doesNotMatch(helper,/event\.repeat|e\.repeat/);
 });
 
-test('U invokes Undo once per press and does not repeat while held', () => {
+test('U only triggers Undo on a quick key release, not keydown or hold', () => {
   assert.match(html, /id="undo">Undo \(<strong>u<\/strong>\)<\/button>/);
   assert.doesNotMatch(html, /↶ Undo/);
   assert.match(script, /e\.key\.toLowerCase\(\)==="u"&&!e\.ctrlKey&&!e\.metaKey&&!e\.altKey/);
-  assert.match(script, /if\(!undoKeyDown\)\{undoKeyDown=true;\$\("undo"\)\.click\(\);\}/);
-  assert.match(script, /if\(e\.key\.toLowerCase\(\)==="u"\)undoKeyDown=false/);
-  assert.match(script, /finishPencilKey\(true\);undoKeyDown=false/);
+  assert.match(script, /if\(undoKeyDownAt===null\)undoKeyDownAt=performance\.now\(\)/);
+  assert.match(script, /if\(e\.key\.toLowerCase\(\)==="u"&&undoKeyDownAt!==null\)/);
+  assert.match(script, /performance\.now\(\)-pressedAt<250/);
+  assert.match(script, /\$\("undo"\)\.click\(\)/);
+  assert.match(script, /finishPencilKey\(true\);undoKeyDownAt=null/);
   assert.match(script, /if\(\["TEXTAREA","INPUT","SELECT"\]\.includes\(document\.activeElement\?\.tagName\)\)return;/);
+});
+
+test('short U press undoes once; held U and lost focus cancel', () => {
+  const helper=sourceBetween('document.addEventListener("keydown"', '\nupdateAvailability();beginStartup();');
+  assert.doesNotMatch(helper, /e\.repeat/);
+  // The key is only recorded on keydown; it is consumed and cleared on keyup.
+  assert.match(helper, /if\(undoKeyDownAt===null\)undoKeyDownAt=performance\.now\(\)/);
+  assert.match(helper, /const pressedAt=undoKeyDownAt;undoKeyDownAt=null/);
+  assert.match(helper, /if\(performance\.now\(\)-pressedAt<250/);
 });
