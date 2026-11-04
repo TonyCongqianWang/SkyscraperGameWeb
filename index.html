@@ -193,7 +193,7 @@ footer{display:block;text-align:center;margin:auto 0 0;padding-top:9px}
 <div class="panel-head"><h2 id="heading">Skyscrapers</h2><p id="source-note" class="sub" role="status">Loading curated puzzle…</p></div><div class="board-stage"><div id="board" class="board" aria-label="Skyscrapers puzzle"></div>
 
 <section id="statistics" class="statistics" aria-label="Puzzle statistics" hidden><div class="statistics-head"><h3>Statistics</h3><button id="stats-close" type="button" aria-label="Hide statistics">×</button></div><dl><dt>Time</dt><dd id="stat-time">00:00.00</dd><dt>Inserts</dt><dd id="stat-inserts">0</dd><dt>Undos</dt><dd id="stat-undos">0</dd><dt>Dead ends</dt><dd id="stat-dead-ends">0</dd><dt>Solution peeked</dt><dd id="stat-solution">No</dd><dt>Domain assist</dt><dd id="stat-domains">No</dd></dl></section><section id="help-popup" class="help-popup" hidden><div class="help-top"><strong>How to play</strong><button id="help-close" type="button" aria-label="Close instructions">×</button></div><p>Place heights 1–N once in each row and column. Edge numbers show how many buildings you can see looking inward; taller ones hide those behind them.</p><p>Select a square and enter a number, or double-click it for a picker. Click a clue to check its view. In Manual domains, use Pencil to toggle candidate notes or Pen to enter a height; Auto domains shows calculated candidates and forces Pen. <a href="https://github.com/TonyCongqianWang/SkyscraperGame#game-objective">Illustrated rules ↗</a></p></section></div>
-<div class="pad" id="pad"></div><div class="actions"><button id="undo">↶ Undo</button><button id="show-solution">Show solution</button><button id="pencil" aria-pressed="false">Use pencil</button><button id="domains" aria-pressed="false">Manual domains</button><button id="stats-toggle" aria-controls="statistics" aria-expanded="false">Statistics</button></div>
+<div class="pad" id="pad"></div><div class="actions"><button id="undo">↶ Undo</button><button id="show-solution">Show solution</button><button id="pencil" aria-pressed="false">Use Pencil (<strong>t</strong>)</button><button id="domains" aria-pressed="false">Manual domains</button><button id="stats-toggle" aria-controls="statistics" aria-expanded="false">Statistics</button></div>
 <p id="status" role="status" aria-live="polite"></p>
 <div class="game-meta"><p id="puzzle-id" class="sub" hidden></p><div class="help-wrap"><button id="help-toggle" type="button" aria-expanded="false" aria-controls="help-popup">How to play?</button></div></div></main><aside class="panel controls"><h2>New puzzle</h2><label for="size">Grid size <output id="sizeOut">5 × 5</output></label><input id="size" type="range" min="4" max="9" step="1" value="5">
 <label for="difficulty">Difficulty <output id="difficultyOut">Loading…</output></label><input id="difficulty" type="range" min="0" max="7" step="1" value="2" disabled><p id="difficultyCount" class="sub"></p>
@@ -562,7 +562,7 @@ function render(){
   e.setAttribute("aria-pressed",String(!autoDomains&&pencilMode&&!!manualCandidates.get(selected)?.has(v)));
   e.onclick=()=>setCell(v);pad.append(e);
  }
- $("pencil").textContent=pencilMode?"Use pen":"Use pencil";
+ $("pencil").replaceChildren(document.createTextNode(pencilMode?"Use Pen (":"Use Pencil ("),Object.assign(document.createElement("strong"),{textContent:"t"}),document.createTextNode(")"));
  $("pencil").setAttribute("aria-pressed",String(pencilMode));
  $("domains").textContent=autoDomains?"Auto domains":"Manual domains";
  $("domains").setAttribute("aria-pressed",String(autoDomains));
@@ -606,6 +606,19 @@ $("domains").onclick=()=>{confirmLoad();autoDomains=!autoDomains;if(autoDomains)
 $("load").onclick=()=>loadBackup?undoLoad():load();$("puzzle").addEventListener("input",()=>{confirmLoad();++requestId;});$("copy").onclick=async()=>{let s=puzzleText();$("puzzle").value=s;try{await navigator.clipboard.writeText(s);setStatus("Puzzle copied.")}catch{setStatus("Puzzle shown in text box; copy it from there.")}};
 
 for(const [input,out] of [["clue","clueOut"],["filled","filledOut"]])$(input).oninput=()=>$(out).textContent=$(input).value+"%";
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){closePicker();toggleHelp(false);if(!$("statistics").hidden)showStatistics(false);return}if(!$("statistics").hidden)return;if(["TEXTAREA","INPUT","SELECT"].includes(document.activeElement?.tagName))return;if(e.key==="Backspace"){e.preventDefault();$("undo").click();return;}if(/^\d$/.test(e.key)&&Number(e.key)<=n&&Number(e.key)>0){if(!$("picker").hidden)closePicker();setCell(Number(e.key));}else if(e.key==="Delete"){$("undo").click()}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){$("undo").click();e.preventDefault()}});
+let pencilKeyDownAt=null,pencilKeyOriginalMode=false;
+function finishPencilKey(restoreOnBlur=false){
+ if(pencilKeyDownAt===null)return;
+ const shouldRestore=restoreOnBlur||performance.now()-pencilKeyDownAt>=250;
+ pencilKeyDownAt=null;
+ if(shouldRestore&&!autoDomains&&pencilMode!==pencilKeyOriginalMode){
+  pencilMode=pencilKeyOriginalMode;
+  closePicker();render();
+  setStatus(pencilMode?"Pencil mode: toggle candidate notes in empty cells.":"Pen mode: place building heights.");
+ }
+}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closePicker();toggleHelp(false);if(!$("statistics").hidden)showStatistics(false);return}if(!$("statistics").hidden)return;if(["TEXTAREA","INPUT","SELECT"].includes(document.activeElement?.tagName))return;if(e.key.toLowerCase()==="t"&&!e.ctrlKey&&!e.metaKey&&!e.altKey){if(!$("pencil").disabled){e.preventDefault();if(pencilKeyDownAt===null){pencilKeyDownAt=performance.now();pencilKeyOriginalMode=pencilMode;$("pencil").click();}}return;}if(e.key==="Backspace"){e.preventDefault();$("undo").click();return;}if(/^\d$/.test(e.key)&&Number(e.key)<=n&&Number(e.key)>0){if(!$("picker").hidden)closePicker();setCell(Number(e.key));}else if(e.key==="Delete"){$("undo").click()}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){$("undo").click();e.preventDefault()}});
+document.addEventListener("keyup",e=>{if(e.key.toLowerCase()==="t")finishPencilKey();});
+window.addEventListener("blur",()=>finishPencilKey(true));
 updateAvailability();beginStartup();
 </script></body></html>
