@@ -16,7 +16,7 @@ function sourceBetween(start, end) {
 
 function notesEngine() {
   const source = [
-    sourceBetween('function cloneManualCandidates(source)', '\nfunction snapshotState()'),
+    sourceBetween('function cloneManualCandidates(source)', '\nfunction cloneInvalidCandidates(source)'),
     sourceBetween('function togglePencilMark(index,value)', '\nfunction setCell(value)')
   ].join('\n');
   const context = vm.createContext({});
