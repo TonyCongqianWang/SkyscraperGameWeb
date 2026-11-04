@@ -134,8 +134,8 @@ test('short U press undoes once; held U and lost focus cancel', () => {
   assert.match(helper, /if\(performance\.now\(\)-pressedAt<250/);
 });
 
-test('Domains toggle labels the mode it will switch to', () => {
-  assert.match(html, /id="domains" aria-pressed="false">Auto domains<\/button>/);
-  assert.match(script, /\$\("domains"\)\.textContent=autoDomains\?"Manual domains":"Auto domains"/);
+test('Domains toggle labels the currently active mode', () => {
+  assert.match(html, /id="domains" aria-pressed="false">Domains: Manual<\/button>/);
+  assert.match(script, /\$\("domains"\)\.textContent=autoDomains\?"Domains: Auto":"Domains: Manual"/);
   assert.match(script, /\$\("domains"\)\.setAttribute\("aria-pressed",String\(autoDomains\)\)/);
 });
