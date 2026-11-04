@@ -285,8 +285,8 @@ function getLine(side,k,g=grid){if(side===0)return g.map(row=>row[k]);if(side===
 function computeClues(g){return Array.from({length:4*n},(_,i)=>visible(getLine(Math.floor(i/n),i%n,g)))}
 function flatten(g){return g.flat().join(" ")}
 /* A history entry owns its grid and candidate exclusions. */
-function cloneInvalidCandidates(source){return new Map([...source].map(([index,values])=>[index,new Set(values)]))}
 function cloneManualCandidates(source){return new Map([...source].map(([index,values])=>[index,new Set(values)]))}
+function cloneInvalidCandidates(source){return new Map([...source].map(([index,values])=>[index,new Set(values)]))}
 function snapshotState(){return {grid:grid.map(row=>row.slice()),invalidCandidates:cloneInvalidCandidates(invalidCandidates)}}
 function restoreState(state){grid=state.grid;invalidCandidates=state.invalidCandidates}
 function puzzleText(){return '"'+clues.join(" ")+'" "'+flatten(initial)+'"'}
