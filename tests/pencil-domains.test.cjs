@@ -108,8 +108,8 @@ test('tap T is permanent; hold T is temporary, without using key-repeat events',
   const helper=sourceBetween('let pencilKeyDownAt=null', 'document.addEventListener("keydown"');
   assert.match(helper, /performance\.now\(\)-pencilKeyDownAt>=250/);
   assert.match(helper, /pencilMode=pencilKeyOriginalMode/);
-  assert.match(script, /document\.addEventListener\("keyup",e=>\{if\(e\.key\.toLowerCase\(\)==="t"\)finishPencilKey\(\);\}\)/);
-  assert.match(script, /window\.addEventListener\("blur",\(\)=>finishPencilKey\(true\)\)/);
+  assert.match(script, /document\.addEventListener\("keyup",e=>\{if\(e\.key\.toLowerCase\(\)==="t"\)finishPencilKey\(\);/);
+  assert.match(script, /window\.addEventListener\("blur",\(\)=>\{finishPencilKey\(true\);undoKeyDown=false;\}\)/);
   assert.doesNotMatch(helper,/event\.repeat|e\.repeat/);
 });
 
