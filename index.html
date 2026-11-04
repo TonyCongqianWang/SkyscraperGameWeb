@@ -606,7 +606,7 @@ $("domains").onclick=()=>{confirmLoad();autoDomains=!autoDomains;if(autoDomains)
 $("load").onclick=()=>loadBackup?undoLoad():load();$("puzzle").addEventListener("input",()=>{confirmLoad();++requestId;});$("copy").onclick=async()=>{let s=puzzleText();$("puzzle").value=s;try{await navigator.clipboard.writeText(s);setStatus("Puzzle copied.")}catch{setStatus("Puzzle shown in text box; copy it from there.")}};
 
 for(const [input,out] of [["clue","clueOut"],["filled","filledOut"]])$(input).oninput=()=>$(out).textContent=$(input).value+"%";
-let pencilKeyDownAt=null,pencilKeyOriginalMode=false,undoKeyDown=false;
+let pencilKeyDownAt=null,pencilKeyOriginalMode=false,undoKeyDownAt=null;
 function finishPencilKey(restoreOnBlur=false){
  if(pencilKeyDownAt===null)return;
  const shouldRestore=restoreOnBlur||performance.now()-pencilKeyDownAt>=250;
@@ -617,8 +617,8 @@ function finishPencilKey(restoreOnBlur=false){
   setStatus(pencilMode?"Pencil mode: toggle candidate notes in empty cells.":"Pen mode: place building heights.");
  }
 }
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){closePicker();toggleHelp(false);if(!$("statistics").hidden)showStatistics(false);return}if(!$("statistics").hidden)return;if(["TEXTAREA","INPUT","SELECT"].includes(document.activeElement?.tagName))return;if(e.key.toLowerCase()==="t"&&!e.ctrlKey&&!e.metaKey&&!e.altKey){if(!$("pencil").disabled){e.preventDefault();if(pencilKeyDownAt===null){pencilKeyDownAt=performance.now();pencilKeyOriginalMode=pencilMode;$("pencil").click();}}return;}if(e.key.toLowerCase()==="u"&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();if(!undoKeyDown){undoKeyDown=true;$("undo").click();}return;}if(e.key==="Backspace"){e.preventDefault();$("undo").click();return;}if(/^\d$/.test(e.key)&&Number(e.key)<=n&&Number(e.key)>0){if(!$("picker").hidden)closePicker();setCell(Number(e.key));}else if(e.key==="Delete"){$("undo").click()}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){$("undo").click();e.preventDefault()}});
-document.addEventListener("keyup",e=>{if(e.key.toLowerCase()==="t")finishPencilKey();if(e.key.toLowerCase()==="u")undoKeyDown=false;});
-window.addEventListener("blur",()=>{finishPencilKey(true);undoKeyDown=false;});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closePicker();toggleHelp(false);if(!$("statistics").hidden)showStatistics(false);return}if(!$("statistics").hidden)return;if(["TEXTAREA","INPUT","SELECT"].includes(document.activeElement?.tagName))return;if(e.key.toLowerCase()==="t"&&!e.ctrlKey&&!e.metaKey&&!e.altKey){if(!$("pencil").disabled){e.preventDefault();if(pencilKeyDownAt===null){pencilKeyDownAt=performance.now();pencilKeyOriginalMode=pencilMode;$("pencil").click();}}return;}if(e.key.toLowerCase()==="u"&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();if(undoKeyDownAt===null)undoKeyDownAt=performance.now();return;}if(e.key==="Backspace"){e.preventDefault();$("undo").click();return;}if(/^\d$/.test(e.key)&&Number(e.key)<=n&&Number(e.key)>0){if(!$("picker").hidden)closePicker();setCell(Number(e.key));}else if(e.key==="Delete"){$("undo").click()}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){$("undo").click();e.preventDefault()}});
+document.addEventListener("keyup",e=>{if(e.key.toLowerCase()==="t")finishPencilKey();if(e.key.toLowerCase()==="u"&&undoKeyDownAt!==null){const pressedAt=undoKeyDownAt;undoKeyDownAt=null;if(performance.now()-pressedAt<250&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&$("statistics").hidden&&!["TEXTAREA","INPUT","SELECT"].includes(document.activeElement?.tagName))$("undo").click();}});
+window.addEventListener("blur",()=>{finishPencilKey(true);undoKeyDownAt=null;});
 updateAvailability();beginStartup();
 </script></body></html>
