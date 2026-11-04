@@ -95,3 +95,10 @@ test('new puzzles clear pencil notes while ordinary Undo does not', () => {
 test('the complete inline script remains valid JavaScript', () => {
   assert.doesNotThrow(()=>new vm.Script(script));
 });
+
+test('T shortcut is highlighted and routes through the existing mode toggle', () => {
+  assert.match(html, /Use Pencil \(<strong>t<\/strong>\)/);
+  assert.match(script, /pencil"\)\.replaceChildren\(document\.createTextNode\(pencilMode\?"Use Pen \(":"Use Pencil \("/);
+  assert.match(script, /e\.key\.toLowerCase\(\)==="t"&&!e\.ctrlKey&&!e\.metaKey&&!e\.altKey/);
+  assert.match(script, /if\(!\$\("pencil"\)\.disabled\)\{e\.preventDefault\(\);\$\("pencil"\)\.click\(\);\}/);
+});
